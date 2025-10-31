@@ -319,7 +319,7 @@ axiosInstance.interceptors.response.use(
         
         // Redirect to login if we're not already there
         if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/university/login';
+          window.location.href = '/login';
         }
         
         return Promise.reject(refreshError);
@@ -342,7 +342,7 @@ axiosInstance.interceptors.response.use(
       store.dispatch(logoutAction());
       store.dispatch(clearUser());
       showError("Session expired. Please login again.");
-      window.location.href = "/university/login";
+      window.location.href = "/login";
     } else if (error.response?.data?.message) {
       showError(error.response.data.message);
     } else if (error.message) {

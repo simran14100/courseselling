@@ -443,7 +443,7 @@ export async function getEnrollmentStatus(token) {
   }
 } 
 
-export async function fetchEnrolledStudents(token, page = 1, limit = 10, search = "") {
+export async function fetchEnrolledStudents(token, page = 1, limit = 10, search = "", dispatch = null, navigate = null) {
   try {
     const response = await apiConnector("GET", 
       `/api/v1/admin/enrolled-students?page=${page}&limit=${limit}&search=${search}`, 
@@ -472,14 +472,16 @@ export async function fetchEnrolledStudents(token, page = 1, limit = 10, search 
           }
         )
         
-        if (userResponse.data.success) {
+        if (userResponse.data.success && dispatch) {
           dispatch(setUser(userResponse.data.user))
         }
       } catch (refreshError) {
         console.error("Error refreshing user data:", refreshError)
       }
       
-      navigate("/dashboard/enrolled-courses")
+      if (navigate) {
+        navigate("/dashboard/enrolled-courses")
+      }
       return
     }
     

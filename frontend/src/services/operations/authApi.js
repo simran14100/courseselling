@@ -210,7 +210,7 @@ export function universitySignup(userData) {
       // Handle redirection if needed
       if (shouldRedirectToLogin && userData) {
         // Build login URL with email and program parameters
-        const loginUrl = new URL('/university/login', window.location.origin);
+        const loginUrl = new URL('/login', window.location.origin);
         if (userData.email) loginUrl.searchParams.set('email', userData.email);
         if (userData.program) loginUrl.searchParams.set('program', userData.program);
 
