@@ -1,5 +1,31 @@
-import jwtDecode from "jwt-decode";
+import jwtDecode from 'jwt-decode';
 import { store } from "../store";
+
+// Token storage functions
+export const getToken = () => {
+  try {
+    return localStorage.getItem('token');
+  } catch (error) {
+    console.error('Error getting token from localStorage:', error);
+    return null;
+  }
+};
+
+export const setToken = (token) => {
+  try {
+    localStorage.setItem('token', token);
+  } catch (error) {
+    console.error('Error saving token to localStorage:', error);
+  }
+};
+
+export const removeToken = () => {
+  try {
+    localStorage.removeItem('token');
+  } catch (error) {
+    console.error('Error removing token from localStorage:', error);
+  }
+};
 
 // Check if token is expired or will expire soon
 export const isTokenExpired = (token) => {

@@ -117,7 +117,29 @@ exports.createRating = async (req, res) => {
 
   exports.getAverageRating = async (req, res) => {
   try {
-    const { courseId } = req.body; // Now reading from request body
+    console.log('Getting average rating for course:', req.query);
+    
+    // Get courseId from query params
+    const { courseId } = req.query;
+    
+    // Validate courseId
+    if (!courseId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Course ID is required',
+        receivedQuery: req.query
+      });
+    }
+    
+    // Validate if course exists
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+        courseId
+      });
+    }
     
     const result = await RatingAndReview.aggregate([
       {
@@ -134,10 +156,12 @@ exports.createRating = async (req, res) => {
       },
     ]);
 
+    console.log('Rating aggregation result:', result);
+    
     if (result.length > 0) {
       return res.status(200).json({
         success: true,
-        averageRating: result[0].averageRating,
+        averageRating: result[0].averageRating || 0,
         reviewCount: result[0].reviewCount,
       });
     }

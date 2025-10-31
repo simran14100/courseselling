@@ -680,14 +680,33 @@ exports.editCourse = async (req, res) => {
     }
 
     // If Thumbnail Image is found, update it
-    if (req.files) {
-      console.log("thumbnail update")
-      const thumbnail = req.files.thumbnailImage
-      const thumbnailImage = await uploadImageToCloudinary(
-        thumbnail,
-        process.env.FOLDER_NAME
-      )
-      course.thumbnail = thumbnailImage.secure_url
+    if (req.files && req.files.thumbnailImage) {
+      try {
+        console.log("thumbnail update");
+        const thumbnail = req.files.thumbnailImage;
+        console.log('Thumbnail file details:', {
+          name: thumbnail.name,
+          size: thumbnail.size,
+          mimetype: thumbnail.mimetype
+        });
+        
+        const thumbnailImage = await uploadImageToCloudinary(
+          thumbnail,
+          process.env.FOLDER_NAME || 'codeHelp'
+        );
+        
+        console.log('Thumbnail upload successful:', {
+          url: thumbnailImage.secure_url,
+          public_id: thumbnailImage.public_id
+        });
+        
+        course.thumbnail = thumbnailImage.secure_url;
+      } catch (error) {
+        console.error('Error uploading thumbnail:', error);
+        // Continue with the rest of the update even if thumbnail upload fails
+      }
+    } else {
+      console.log('No thumbnail provided, skipping thumbnail update');
     }
 
     // Handle intro video update

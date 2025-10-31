@@ -1,193 +1,13 @@
-// import React, { useState, useEffect } from 'react';
-// import { useDispatch, useSelector } from 'react-redux';
-// import { useNavigate, useLocation } from 'react-router-dom';
-// import { showError } from '../utils/toast';
-// import { FaSpinner, FaCheckCircle, FaTimesCircle, FaLock } from 'react-icons/fa';
-// import { buyEnrollment } from '../services/operations/enrollmentApi';
 
-// const EnrollmentPayment = () => {
-//   const navigate = useNavigate();
-//   const routerLocation = useLocation();
-//   const dispatch = useDispatch();
-//   const { user } = useSelector((state) => state.profile);
-//   const { token } = useSelector((state) => state.auth);
-
-//   const [loading, setLoading] = useState(false);
-//   const [paymentStatus, setPaymentStatus] = useState('pending'); // pending, processing, success, failed
-
-
-// const ED_TEAL = "#07A698"; // brand teal
-// const ED_TEAL_DARK = "#059a8c"; // darker hover teal
-
-//   useEffect(() => {
-//     if (!token) {
-//       toast.error('Please login to access enrollment payment');
-//       navigate('/login');
-//       return;
-//     }
-//     if (user?.accountType !== 'Student') {
-//       toast.error('Only students can access enrollment payment');
-//       navigate('/dashboard');
-//       return;
-//     }
-//     if (user?.enrollmentFeePaid) {
-//       setPaymentStatus('alreadyPaid');
-//       return;
-//     }
-//   }, [token, user, navigate]);
-
-//   const handleEnrollmentPayment = async () => {
-//     try {
-//       setLoading(true);
-//       await buyEnrollment(token, user, navigate, dispatch);
-//       setPaymentStatus('success');
-//     } catch (error) {
-//       setPaymentStatus('failed');
-//       console.log("ENROLLMENT PAYMENT ERROR............", error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   return (
-//     <div className="min-h-screen flex items-center justify-center bg-[#f9fafb] py-12 mt-9 px-4  ">
-//       <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl p-10 flex flex-col gap-8 border border-[#e0e0e0]">
-//         <div className="text-center">
-//           <h1 className="text-4xl font-extrabold text-[#22223b] mb-2">Enrollment Payment</h1>
-//           <p className="text-lg text-[#4a4e69]">Complete your enrollment to access all courses</p>
-//         </div>
-
-//         {/* Payment Status */}
-//         <div className="flex flex-col items-center mb-4">
-//           {paymentStatus === 'success' ? (
-//             <FaCheckCircle className="text-[#22c55e] text-5xl mb-2" />
-//           ) : paymentStatus === 'failed' ? (
-//             <FaTimesCircle className="text-[#ef4444] text-5xl mb-2" />
-//           ) : loading ? (
-//             <FaSpinner className="text-[#ffd60a] text-5xl mb-2 animate-spin" />
-//           ) : (
-//             <FaLock className="text-[#009e5c] text-5xl mb-2" />
-//           )}
-//           <h2 className={`text-xl font-semibold ${paymentStatus === 'success' ? 'text-[#22c55e]' : paymentStatus === 'failed' ? 'text-[#ef4444]' : paymentStatus === 'pending' ? 'text-[#009e5c]' : 'text-[#ffd60a]'}`}>
-//             {paymentStatus === 'success'
-//               ? 'Payment Successful!'
-//               : paymentStatus === 'failed'
-//               ? 'Payment Failed'
-//               : loading
-//               ? 'Processing Payment...'
-//               : 'Ready to Pay'}
-//           </h2>
-//         </div>
-
-//         <hr className="border-[#e0e0e0] my-2" />
-
-//         {/* Payment Details */}
-//         <div className="bg-[#f5f5f5] rounded-lg p-6 flex flex-col gap-3 border border-[#e0e0e0]">
-//           <div className="flex justify-between">
-//             <span className="text-[#4a4e69]">Enrollment Fee:</span>
-//             <span className="text-[#22223b] font-semibold">₹1,000</span>
-//           </div>
-//           <div className="flex justify-between">
-//             <span className="text-[#4a4e69]">Payment Method:</span>
-//             <span className="text-[#22223b]">Razorpay</span>
-//           </div>
-//           <div className="flex justify-between">
-//             <span className="text-[#4a4e69]">Currency:</span>
-//             <span className="text-[#22223b]">INR</span>
-//           </div>
-//         </div>
-
-//         {/* Benefits */}
-//         <div className="bg-[#f5f5f5] rounded-lg p-6 flex flex-col gap-2 border border-[#e0e0e0]">
-//           <h3 className="text-lg font-semibold text-[#22223b] mb-2">What you'll get:</h3>
-//           <ul className="space-y-2 text-[#4a4e69]">
-//             <li className="flex items-center"><span className="text-[#22c55e] mr-2">✓</span>Access to all courses</li>
-//             <li className="flex items-center"><span className="text-[#22c55e] mr-2">✓</span>Course certificates</li>
-//             <li className="flex items-center"><span className="text-[#22c55e] mr-2">✓</span>24/7 support</li>
-//             <li className="flex items-center"><span className="text-[#22c55e] mr-2">✓</span>Lifetime access</li>
-//           </ul>
-//         </div>
-
-//         {/* Payment Button */}
-//         {paymentStatus === 'pending' && (
-//           <button
-//             onClick={handleEnrollmentPayment}
-//             disabled={loading}
-//             className="w-full py-4 rounded-lg text-lg font-bold bg-[#009e5c] hover:bg-[#007a44] text-white shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-//           >
-//             {loading ? <FaSpinner className="animate-spin h-6 w-6 mx-auto" /> : 'Pay ₹1,000 Enrollment Fee'}
-//           </button>
-//         )}
-
-//         {paymentStatus === 'success' && (
-//           <div className="text-center">
-//             <p className="text-[#22c55e] font-medium mb-4">Redirecting to dashboard...</p>
-//           </div>
-//         )}
-
-//         {paymentStatus === 'failed' && (
-//           <button
-//             onClick={handleEnrollmentPayment}
-//             className="w-full py-4 rounded-lg text-lg font-bold bg-[#ef4444] hover:bg-red-400 text-white shadow-lg transition"
-//           >
-//             Try Again
-//           </button>
-//         )}
-
-//         {paymentStatus === 'alreadyPaid' && (
-//           <div style={{
-//             textAlign: 'center',
-//             padding: '16px',
-//             backgroundColor: '#f0fdf4',
-//             borderRadius: '12px',
-//             border: `1px solid ${SUCCESS_GREEN}20`
-//           }}>
-//             <FaCheckCircle style={{
-//               color: SUCCESS_GREEN,
-//               fontSize: '36px',
-//               margin: '0 auto 8px'
-//             }} />
-//             <p style={{
-//               color: SUCCESS_GREEN,
-//               fontWeight: '600'
-//             }}>Enrollment fee already paid!</p>
-//             <button
-//               style={{
-//                 marginTop: '16px',
-//                 padding: '12px 24px',
-//                 borderRadius: '8px',
-//                 backgroundColor: ED_TEAL,
-//                 color: 'white',
-//                 border: 'none',
-//                 fontWeight: '600',
-//                 cursor: 'pointer'
-//               }}
-//               onClick={() => navigate('/dashboard')}
-//             >
-//               Go to Dashboard
-//             </button>
-//           </div>
-//         )}
-
-//         {/* Security Notice */}
-//         <div className="mt-4 text-center">
-//           <p className="text-xs text-[#4a4e69]">🔒 Your payment is secured by Razorpay</p>
-//         </div>
-//       </div>
-//     </div>
-    
-
-//   );
-// };
-
-// export default EnrollmentPayment; 
 
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { showError } from '../utils/toast';
+import { showError, showSuccess, showLoading, dismissToast } from '../utils/toast';
 import { FaSpinner, FaCheckCircle, FaTimesCircle, FaLock } from 'react-icons/fa';
 import { buyEnrollment } from '../services/operations/enrollmentApi';
+import { apiConnector } from '../services/apiConnector';
+import { setUser } from '../store/slices/profileSlice';
 
 // Color constants
 const ED_TEAL = "#07A698";
@@ -208,39 +28,210 @@ const EnrollmentPayment = () => {
   const { token } = useSelector((state) => state.auth);
 
   const [loading, setLoading] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState('pending');
+  const [paymentStatus, setPaymentStatus] = useState('pending'); // pending, processing, success, failed, alreadyPaid
+
+  // Handle redirection after successful payment
+  useEffect(() => {
+    if (paymentStatus === 'success') {
+      const timer = setTimeout(() => {
+        navigate('/dashboard/cart/checkout');
+      }, 1500); // Redirect after 1.5 seconds to show success message
+      
+      return () => clearTimeout(timer);
+    }
+  }, [paymentStatus, navigate]);
 
   useEffect(() => {
-    if (!token) {
-      showError('Please login to access enrollment payment');
-      navigate('/login');
-      return;
-    }
-    if (user?.accountType !== 'Student') {
-      showError('Only students can access enrollment payment');
-      navigate('/dashboard');
-      return;
-    }
-    if (user?.enrollmentFeePaid) {
-      setPaymentStatus('alreadyPaid');
-      return;
-    }
+    const checkEnrollmentStatus = async () => {
+      try {
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        // Handle non-student users without showing a toast
+        if (user?.accountType !== 'Student') {
+          setPaymentStatus('not_allowed');
+          return;
+        }
+
+        // Always fetch fresh user data from the backend
+        const userResponse = await apiConnector(
+          "GET",
+          "/api/v1/profile/getUserDetails",
+          null,
+          { 
+            Authorization: `Bearer ${token}`,
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        );
+
+        if (userResponse.data.success && userResponse.data.user) {
+          const userData = userResponse.data.user;
+          
+          // Ensure we have all required user fields
+          const completeUserData = {
+            ...user,  // Keep existing user data
+            ...userData, // Update with new data
+            // Ensure required fields are present
+            firstName: userData.firstName || user?.firstName || '',
+            lastName: userData.lastName || user?.lastName || '',
+            email: userData.email || user?.email || '',
+            accountType: userData.accountType || user?.accountType || 'Student',
+            enrollmentFeePaid: userData.enrollmentFeePaid || false
+          };
+          
+          dispatch(setUser(completeUserData));
+          
+          // Check enrollment status from the fresh data
+          if (completeUserData.enrollmentFeePaid) {
+            setPaymentStatus('alreadyPaid');
+          } else {
+            setPaymentStatus('pending');
+          }
+        } else {
+          setPaymentStatus('pending');
+        }
+
+        // Check for redirect message in URL
+        const searchParams = new URLSearchParams(window.location.search);
+        const message = searchParams.get('message');
+        if (message) {
+          showError(decodeURIComponent(message));
+        }
+
+        // Check for redirect message in state
+        if (routerLocation.state?.message) {
+          showError(routerLocation.state.message);
+        }
+      } catch (error) {
+        console.error('Error checking enrollment status:', error);
+        showError('Failed to check enrollment status');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkEnrollmentStatus();
     setPaymentStatus('pending');
   }, [token, user, navigate]);
 
   const handleEnrollmentPayment = async () => {
+    const toastId = showLoading("Initiating payment...");
     try {
       setLoading(true);
       setPaymentStatus('processing');
-      const returnTo = routerLocation?.state?.returnTo || null;
-      await buyEnrollment(token, user, navigate, dispatch, returnTo);
-      setPaymentStatus('success');
+
+      // First, check if the user is allowed to make a payment
+      if (user?.accountType !== 'Student') {
+        showError('Only students can make enrollment payments');
+        setPaymentStatus('not_allowed');
+        return;
+      }
+
+      // Use the checkout path for redirection after payment
+      const checkoutPath = '/dashboard/cart/checkout';
+      
+      // Proceed with payment
+      await buyEnrollment(
+        token, 
+        user, 
+        null, // Don't pass navigate to prevent navigation
+        dispatch, 
+        checkoutPath // Redirect to checkout after payment
+      );
+
+      // After payment attempt, refresh user data to get the latest status
+      // This is a fallback in case the payment handler doesn't update the UI
+      try {
+        const updatedUserResponse = await apiConnector(
+          "GET",
+          "/api/v1/profile/getUserDetails",
+          null,
+          { 
+            Authorization: `Bearer ${token}`,
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        );
+
+        if (updatedUserResponse.data.success && updatedUserResponse.data.user) {
+          const userData = updatedUserResponse.data.user;
+          
+          // Ensure we have all required user fields
+          const completeUserData = {
+            ...user,  // Keep existing user data
+            ...userData, // Update with new data
+            // Ensure required fields are present
+            firstName: userData.firstName || user?.firstName || '',
+            lastName: userData.lastName || user?.lastName || '',
+            email: userData.email || user?.email || '',
+            accountType: userData.accountType || user?.accountType || 'Student',
+            enrollmentFeePaid: userData.enrollmentFeePaid || false
+          };
+          
+          dispatch(setUser(completeUserData));
+          
+          // Update payment status based on the actual database state
+          if (completeUserData.enrollmentFeePaid) {
+            setPaymentStatus('success');
+            showSuccess("Enrollment payment successful! You can now access all courses.");
+          } else {
+            // This should not happen if the payment was successful, but handle it just in case
+            setPaymentStatus('pending');
+            showError("Payment verification in progress. Please refresh the page to check your status.");
+          }
+        }
+      } catch (refreshError) {
+        console.error("Error refreshing user data after payment:", refreshError);
+        // Don't throw here, as the payment might still have been successful
+      }
+      
+      // Update the UI to reflect successful payment
+      // No automatic navigation - stay on the same page
+      // The user can continue to browse or navigate as they wish
+      
     } catch (error) {
-      setPaymentStatus('failed');
       console.error("ENROLLMENT PAYMENT ERROR:", error);
-      showError('Payment failed. Please try again.');
+      setPaymentStatus('pending');
+      
+      // Handle already paid case from error response
+      if (error?.response?.data?.alreadyPaid || 
+          error?.message?.includes('already paid') || 
+          error?.message?.includes('already completed') ||
+          error?.response?.data?.message?.includes('already paid') ||
+          error?.response?.data?.message?.includes('already completed')) {
+            
+        // Refresh user data to ensure we have the latest status
+        try {
+          const userResponse = await apiConnector(
+            "GET",
+            "/api/v1/profile/getUserDetails",
+            null,
+            { Authorization: `Bearer ${token}` }
+          );
+          
+          if (userResponse.data.success && userResponse.data.user) {
+            const userData = userResponse.data.user;
+            dispatch(setUser(userData));
+            
+            if (userData.enrollmentFeePaid) {
+              setPaymentStatus('alreadyPaid');
+              showSuccess('Your enrollment is already complete.');
+              return;
+            }
+          }
+        } catch (refreshError) {
+          console.error("Error refreshing user data:", refreshError);
+        }
+      }
+      
+      // For other errors, show error message
+      showError(error.response?.data?.message || error.message || "Payment failed. Please try again.");
     } finally {
       setLoading(false);
+      dismissToast(toastId);
     }
   };
 
@@ -443,6 +434,7 @@ const EnrollmentPayment = () => {
                 </div>
               ) : (
                 'Pay ₹1,000 Enrollment Fee'
+
               )}
             </button>
           )}
@@ -462,8 +454,14 @@ const EnrollmentPayment = () => {
               }} />
               <p style={{
                 color: SUCCESS_GREEN,
-                fontWeight: '600'
-              }}>Payment Successful! Redirecting...</p>
+                fontWeight: '600',
+                marginBottom: '10px'
+              }}>Payment Successful!</p>
+              <p style={{
+                color: TEXT_LIGHT,
+                fontSize: '14px',
+                margin: 0
+              }}>You will be redirected to your cart checkout...</p>
             </div>
           )}
 

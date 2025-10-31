@@ -151,6 +151,17 @@ exports.sendotp = async (req, res) => {
 
 exports.signup = async (req, res) => {
     try {
+      // Set CORS headers
+      res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+
+      // Handle preflight requests
+      if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+      }
+
       // Destructure fields from the request body
       const {
         firstName,
@@ -161,115 +172,144 @@ exports.signup = async (req, res) => {
         accountType,
         contactNumber,
         otp
-      } = req.body
-      // Check if All Details are there or not
-      if (
-        !firstName ||
-        !lastName ||
-        !email ||
-        !password ||
-        !confirmPassword ||
-        !otp
-      ) {
-        return res.status(403).send({
+      } = req.body;
+
+      // Input validation
+      if (!firstName || !lastName || !email || !password || !confirmPassword || !otp) {
+        return res.status(400).json({
           success: false,
-          message: "All Fields are required",
-        })
+          message: "All fields are required.",
+        });
       }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: "Please provide a valid email address.",
+        });
+      }
+
       // Check if password and confirm password match
       if (password !== confirmPassword) {
         return res.status(400).json({
           success: false,
-          message:
-            "Password and Confirm Password do not match. Please try again.",
-        })
+          message: "Password and confirm password do not match.",
+        });
+      }
+
+      // Check password strength
+      if (password.length < 8) {
+        return res.status(400).json({
+          success: false,
+          message: "Password must be at least 8 characters long.",
+        });
       }
   
       // Check if user already exists
-      const existingUser = await User.findOne({ email })
+      const existingUser = await User.findOne({ email });
       if (existingUser) {
-        return res.status(400).json({
+        return res.status(409).json({
           success: false,
           message: "User already exists. Please sign in to continue.",
-        })
+        });
       }
   
       // Find the most recent OTP for the email
-      const response = await OTP.find({ email }).sort({ createdAt: -1 }).limit(1)
-      console.log(response)
-      if (response.length === 0) {
-        // OTP not found for the email
+      const otpRecords = await OTP.find({ email })
+        .sort({ createdAt: -1 })
+        .limit(1);
+
+      // OTP validation
+      if (otpRecords.length === 0 || otp !== otpRecords[0].otp) {
         return res.status(400).json({
           success: false,
-          message: "The OTP is not valid",
-        })
-      } else if (otp !== response[0].otp) {
-        // Invalid OTP
+          message: "Invalid or expired OTP. Please request a new one.",
+        });
+      }
+
+      // Check if OTP is expired (5 minutes)
+      const otpExpiryTime = 5 * 60 * 1000; // 5 minutes in milliseconds
+      const otpAge = Date.now() - otpRecords[0].createdAt;
+      
+      if (otpAge > otpExpiryTime) {
         return res.status(400).json({
           success: false,
-          message: "The OTP is not valid",
-        })
+          message: "OTP has expired. Please request a new one.",
+        });
       }
   
       // Hash the password
-      const hashedPassword = await bcrypt.hash(password, 10)
+      const hashedPassword = await bcrypt.hash(password, 10);
   
-      // Create the user with role-based approval logic
+      // Set user approval and payment status based on account type
       let approved = true;
       let enrollmentFeePaid = false;
       let paymentStatus = "Pending";
       
-      // Set approval and payment status based on account type
-      if (accountType === "Instructor") {
-        approved = false; // Instructors need admin approval
-      } else if (accountType === "Student") {
-        approved = true; // Students are auto-approved but need to pay enrollment fee
-        enrollmentFeePaid = false;
-        paymentStatus = "Pending";
-      } else if (accountType === "Admin" || accountType === "SuperAdmin" || accountType === "Staff") {
-        approved = true; // Admin roles are auto-approved
-        enrollmentFeePaid = true; // No enrollment fee for admin roles
-        paymentStatus = "Completed";
+      switch (accountType) {
+        case "Instructor":
+          approved = false; // Requires admin approval
+          break;
+        case "Admin":
+        case "SuperAdmin":
+        case "Staff":
+          approved = true;
+          enrollmentFeePaid = true;
+          paymentStatus = "Completed";
+          break;
+        case "Student":
+        default:
+          approved = true;
+          enrollmentFeePaid = false;
+          paymentStatus = "Pending";
       }
   
-      // Create the Additional Profile For User
+      // Create user profile
       const profileDetails = await Profile.create({
         gender: null,
         dateOfBirth: null,
         about: null,
-        contactNumber: null,
-      })
+        contactNumber: contactNumber || null,
+      });
 
-      // User type is no longer used in signup
-
+      // Create user
       const user = await User.create({
-        firstName,
-        lastName,
-        email,
-        contactNumber,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.toLowerCase().trim(),
+        contactNumber: contactNumber ? contactNumber.trim() : null,
         password: hashedPassword,
         accountType: accountType,
         approved: approved,
         enrollmentFeePaid: enrollmentFeePaid,
         paymentStatus: paymentStatus,
         additionalDetails: profileDetails._id,
-        image:`https://api.dicebear.com/5.x/initials/svg?seed=${firstName} ${lastName}`,
-      })
+        image: `https://api.dicebear.com/5.x/initials/svg?seed=${encodeURIComponent(firstName + ' ' + lastName)}`,
+      });
+
+      // Remove sensitive data before sending response
+      const userResponse = user.toObject();
+      delete userResponse.password;
+      delete userResponse.refreshToken;
   
-      return res.status(200).json({
+      return res.status(201).json({
         success: true,
-        user,
-        message: "User registered successfully. Please login to continue.",
-        requiresPayment: accountType === "Student" && !enrollmentFeePaid
-      })
+        user: userResponse,
+        message: "Registration successful! Please login to continue.",
+        requiresPayment: accountType === "Student" && !enrollmentFeePaid,
+        redirectTo: "/login"
+      });
     } catch (error) {
-      console.log(error)
+      console.error('Signup error:', error);
       return res.status(500).json({
         success: false,
-        message: "User cannot be registered. Please try again.",
-      })
+        message: "An error occurred during registration. Please try again.",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
-  }
+  };
 
 
 // exports.login = async(req,res)=>{
@@ -410,11 +450,17 @@ exports.login = async (req, res) => {
         { expiresIn: "7d" }
       );
 
-      // Update user with refresh token
-      user.token = token;
-      user.refreshToken = refreshToken;
-     
-      await user.save();
+      // Update user with refresh token using findOneAndUpdate to avoid validation issues
+      await User.findOneAndUpdate(
+        { _id: user._id },
+        {
+          $set: {
+            token,
+            refreshToken
+          }
+        },
+        { new: true, runValidators: false }
+      );
 
       // Secure cookie settings for access token (24 hours)
       const cookieOptions = {

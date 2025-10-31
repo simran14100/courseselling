@@ -273,24 +273,85 @@ exports.deleteAccount = async (req, res) => {
 }
 
 exports.getAllUserDetails = async (req, res) => {
-    try {
-      const id = req.user.id
-      const userDetails = await User.findById(id)
-        .populate("additionalDetails")
-        .exec()
-      console.log(userDetails)
-      res.status(200).json({
-        success: true,
-        message: "User Data fetched successfully",
-        data: userDetails,
-      })
-    } catch (error) {
-      return res.status(500).json({
+  try {
+    console.log('🔍 [getAllUserDetails] Starting to fetch user details');
+    const userId = req.user?.id || req.user?._id;
+    
+    if (!userId) {
+      console.error('❌ [getAllUserDetails] No user ID found in request');
+      return res.status(400).json({
         success: false,
-        message: error.message,
-      })
+        message: 'User ID is required',
+      });
     }
+
+    console.log(`🔍 [getAllUserDetails] Fetching user with ID: ${userId}`);
+    
+    // Fetch user with specific fields to avoid sensitive data leakage
+    const userDetails = await User.findById(userId)
+      .select('firstName lastName email accountType image additionalDetails')
+      .populate('additionalDetails')
+      .lean()
+      .exec();
+
+    console.log('🔍 [getAllUserDetails] Raw user data from DB:', JSON.stringify(userDetails, null, 2));
+
+    if (!userDetails) {
+      console.error(`❌ [getAllUserDetails] User not found with ID: ${userId}`);
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Ensure we have a name to display
+    let displayName = '';
+    let initials = 'U';
+    
+    // Try to get first name and last name
+    const firstName = userDetails.firstName || '';
+    const lastName = userDetails.lastName || '';
+    
+    if (firstName || lastName) {
+      displayName = `${firstName} ${lastName}`.trim();
+      initials = `${firstName ? firstName[0] : ''}${lastName ? lastName[0] : ''}`.toUpperCase() || 'U';
+    } else if (userDetails.email) {
+      // Fallback to email username if no name is set
+      const emailPrefix = userDetails.email.split('@')[0];
+      displayName = emailPrefix;
+      initials = emailPrefix.substring(0, 2).toUpperCase();
+    }
+
+    // Prepare response data
+    const responseData = {
+      ...userDetails,
+      displayName,
+      initials,
+    };
+
+    console.log('🔍 [getAllUserDetails] Sending user data:', {
+      userId: userDetails._id,
+      email: userDetails.email,
+      displayName,
+      initials,
+      hasFirstName: !!firstName,
+      hasLastName: !!lastName,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'User data fetched successfully',
+      data: responseData,
+    });
+  } catch (error) {
+    console.error('❌ [getAllUserDetails] Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch user details',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
   }
+};
 
   exports.updateDisplayPicture = async (req, res) => {
     try {

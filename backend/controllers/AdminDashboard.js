@@ -107,23 +107,47 @@ exports.getCourseStudents = async (req, res) => {
     }
 };
 
-// Get enrolled students (students who have paid enrollment fee)
+// Get enrolled students (students who have paid enrollment fee or were created by admin)
 exports.getEnrolledStudents = async (req, res) => {
     try {
-        const { page = 1, limit = 10, search } = req.query;
+        const { page = 1, limit = 10, search, includeAdminCreated = 'true' } = req.query;
         
+        // Base filter for students
         let filter = {
             accountType: 'Student',
-            enrollmentFeePaid: true,
-            paymentStatus: 'Completed'
+            $or: [
+                // Either they have paid enrollment fee
+                { 
+                    $and: [
+                        { enrollmentFeePaid: true },
+                        { paymentStatus: 'Completed' }
+                    ]
+                },
+                // OR they were created by admin (if includeAdminCreated is true)
+                ...(includeAdminCreated === 'true' ? [
+                    { 
+                        $and: [
+                            { createdByAdmin: true },
+                            { approved: { $ne: false } } // Only include approved admin-created students
+                        ]
+                    }
+                ] : [])
+            ]
         };
         
         if (search) {
-            filter.$or = [
-                { firstName: { $regex: search, $options: 'i' } },
-                { lastName: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } }
-            ];
+            filter = {
+                $and: [
+                    filter,
+                    {
+                        $or: [
+                            { firstName: { $regex: search, $options: 'i' } },
+                            { lastName: { $regex: search, $options: 'i' } },
+                            { email: { $regex: search, $options: 'i' } }
+                        ]
+                    }
+                ]
+            };
         }
 
         const enrolledStudents = await User.find(filter)

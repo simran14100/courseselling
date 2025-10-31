@@ -5,11 +5,12 @@ const router = express.Router();
 const {
     createEnrollmentOrder,
     verifyEnrollmentPayment,
-    getEnrollmentStatus
+    getEnrollmentStatus,
+    resetEnrollmentStatus
 } = require("../controllers/EnrollmentPayment");
 
 // Import middleware
-const { auth, isStudent } = require("../middlewares/auth");
+const { auth, isStudent, isAdmin } = require("../middlewares/auth");
 
 // ********************************************************************************************************
 //                                      Enrollment Payment routes
@@ -24,4 +25,7 @@ router.post("/verify-payment", auth, isStudent, verifyEnrollmentPayment);
 // Get enrollment payment status
 router.get("/status", auth, isStudent, getEnrollmentStatus);
 
-module.exports = router; 
+// Reset enrollment status (Admin only)
+router.post("/reset-status", auth, isAdmin, resetEnrollmentStatus);
+
+module.exports = router;

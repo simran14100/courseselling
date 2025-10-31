@@ -1,5 +1,6 @@
 // Define your API base URL
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000';
+const BASE_URL = 'http://localhost:4000/api/v1';
+console.log('Using BASE_URL:', BASE_URL);
 // Authentication Endpoints
 export const endpoints = {
   // Auth Endpoints

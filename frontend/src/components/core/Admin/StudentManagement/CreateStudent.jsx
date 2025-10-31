@@ -49,8 +49,18 @@ export default function CreateStudent() {
   }, [isAdmin, token])
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target
-    setFormData((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }))
+    const { name, value, type, checked } = e.target;
+    
+    // For phone input, only allow numbers
+    if (name === 'phone') {
+      const numbers = value.replace(/\D/g, '');
+      setFormData(prev => ({ ...prev, [name]: numbers }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }));
+    }
   }
 
   const validate = () => {
@@ -59,15 +69,20 @@ export default function CreateStudent() {
       toast.error("Please fill all required fields")
       return false
     }
-    const emailRegex = /[^@\s]+@[^@\s]+\.[^@\s]+/
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
-      toast.error("Enter a valid email")
+      toast.error("Please enter a valid email address")
       return false
     }
-    const phoneDigits = phone.replace(/\D/g, "")
-    if (!/^\d{10}$/.test(phoneDigits)) {
-      toast.error("Enter a valid 10-digit mobile number")
-      return false
+    
+    // Phone number validation - accepts formats like:
+    // 1234567890, 123-456-7890, (123) 456-7890, +91 1234567890, etc.
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (phoneDigits.length < 10) {
+      toast.error("Phone number must be at least 10 digits");
+      return false;
     }
     if (!password.trim() || !confirmPassword.trim()) {
       toast.error("Password and Confirm Password are required")
@@ -86,22 +101,34 @@ export default function CreateStudent() {
     if (!validate()) return
 
     setSubmitting(true)
+    const toastId = toast.loading("Creating student...")
+    
     try {
-      const phoneDigits = formData.phone.replace(/\D/g, "")
-      // Create a persisted Student user with createdByAdmin=true
+      // Clean and convert phone number to a number
+      const phoneNumber = parseInt(formData.phone.replace(/\D/g, ''), 10);
+      
+      // 1. First create the student without batchId
       const created = await createStudent({
         name: formData.name,
         email: formData.email,
-        phone: phoneDigits,
+        phone: phoneNumber,
         password: formData.password,
         confirmPassword: formData.confirmPassword,
         enrollmentFeePaid: formData.enrollmentFeePaid,
-        batchId: formData.batchId,
       }, token)
 
-      // Assign to batch (idempotent server-side)
+      // 2. If batchId is provided, add student to the batch
       if (created?._id && formData.batchId) {
-        await addStudentToBatch(formData.batchId, created._id, token)
+        try {
+          await addStudentToBatch(formData.batchId, created._id, token)
+          toast.success("Student created and added to batch successfully!")
+        } catch (batchError) {
+          console.error("Error adding student to batch:", batchError)
+          toast.error("Student created but failed to add to batch")
+          // Continue even if batch assignment fails
+        }
+      } else {
+        toast.success("Student created successfully!")
       }
 
       setFormData({ name: "", email: "", phone: "", batchId: "", enrollmentFeePaid: false, password: "", confirmPassword: "" })
@@ -175,8 +202,9 @@ export default function CreateStudent() {
                   placeholder="Enter 10-digit mobile number"
                   style={inputStyle}
                   inputMode="numeric"
-                  pattern="\\d{10}"
+                  pattern="[0-9]*"
                   maxLength={10}
+                  required
                 />
               </div>
 

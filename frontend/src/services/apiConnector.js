@@ -12,8 +12,11 @@ if (!process.env.REACT_APP_BASE_URL) {
 
 // Create a clean axios instance with minimal configuration
 const createAxiosInstance = () => {
+  const baseURL = process.env.REACT_APP_BASE_URL || 'http://localhost:4000';
+  console.log('Using baseURL:', baseURL);
+  
   const instance = axios.create({
-    baseURL: process.env.REACT_APP_BASE_URL,
+    baseURL: baseURL,
     withCredentials: true,
     timeout: 30000, // 30 seconds
     headers: {
@@ -401,29 +404,31 @@ export const apiConnector = async (method, url, bodyData = null, headers = {}, p
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...headers // Let headers from the function call override
       },
-      params: params,
       withCredentials: withCredentials,
-      // Add timeout and other axios config
-      timeout: 60000, // 60 seconds
-      maxContentLength: 100 * 1024 * 1024, // 100MB
-      maxBodyLength: 100 * 1024 * 1024, // 100MB
-      validateStatus: function (status) {
-        return status >= 200 && status < 500; // Resolve only if the status code is less than 500
-      },
+      params: params || {},
     };
 
-    // Handle request data
-    if (!isDelete && bodyData !== null) {
-      if (isFormData) {
-        // For FormData, let Axios handle the content type with the boundary
+    console.log('Request config:', {
+      method,
+      url,
+      baseURL: axiosInstance.defaults.baseURL,
+      headers: requestConfig.headers,
+      withCredentials,
+      params: params || {},
+    });
+
+    // Add body data if present (for POST, PUT, PATCH requests)
+    if (bodyData) {
+      // Check if we need to use FormData (for file uploads)
+      if (bodyData instanceof FormData) {
+        // For FormData, let the browser set the Content-Type with boundary
+        requestConfig.headers['Content-Type'] = 'multipart/form-data';
         requestConfig.data = bodyData;
-        // Remove Content-Type header to let the browser set it with the correct boundary
-        delete requestConfig.headers['Content-Type'];
         
-        // Log FormData content for debugging
-        console.log('[apiConnector] FormData content:');
+        // Log FormData contents for debugging
+        console.log('Sending FormData with fields:');
         for (let [key, value] of bodyData.entries()) {
-          if (value instanceof File || value instanceof Blob) {
+          if (value instanceof File) {
             console.log(`  ${key}: [File] ${value.name} (${value.size} bytes, ${value.type})`);
           } else {
             console.log(`  ${key}:`, value);
@@ -432,6 +437,7 @@ export const apiConnector = async (method, url, bodyData = null, headers = {}, p
       } else {
         // For JSON data, stringify it
         requestConfig.data = bodyData;
+        console.log('Request data:', JSON.stringify(bodyData, null, 2));
       }
     }
 

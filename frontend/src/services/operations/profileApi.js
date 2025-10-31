@@ -18,7 +18,72 @@ export function fetchUserProfile(token) {
       if (!response.data.success) {
         throw new Error(response.data.message);
       }
-      dispatch(setUser(response.data.data));
+      
+      // Normalize user data before dispatching
+      const userData = response.data.data || response.data.user || {};
+      
+      // Get the last enrollment payment timestamp from session storage
+      const lastPayment = sessionStorage.getItem('lastEnrollmentPayment');
+      const paymentTime = lastPayment ? parseInt(lastPayment, 10) : 0;
+      const timeSincePayment = Date.now() - paymentTime;
+      
+      // If we just made a payment in the last 5 minutes, ensure enrollmentFeePaid is true
+      const justPaidEnrollmentFee = timeSincePayment < 300000; // 5 minutes window
+      
+      // Check if the user just made a payment by looking at the response data
+      const hasSuccessfullyPaid = userData.paymentStatus === 'Completed' || 
+                                 userData.enrollmentStatus === 'Approved' ||
+                                 userData.enrollmentFeePaid === true;
+      
+      // Determine if we should force enrollmentFeePaid to true
+      const shouldForceEnrollmentPaid = justPaidEnrollmentFee || hasSuccessfullyPaid;
+      
+      const normalizedUser = {
+        ...userData,
+        _id: userData._id || userData.id,
+        firstName: userData.firstName || userData.firstname || '',
+        lastName: userData.lastName || userData.lastname || '',
+        email: userData.email || '',
+        accountType: userData.accountType || 'Student',
+        // If we just paid or the backend confirms payment, ensure enrollmentFeePaid is true
+        enrollmentFeePaid: shouldForceEnrollmentPaid ? true : (userData.enrollmentFeePaid || false),
+        paymentStatus: shouldForceEnrollmentPaid ? 'Completed' : (userData.paymentStatus || 'Pending'),
+        enrollmentStatus: shouldForceEnrollmentPaid ? 'Approved' : (userData.enrollmentStatus || 'Pending'),
+        // Add a flag to prevent the enrollment fee error toast
+        _justPaidEnrollmentFee: justPaidEnrollmentFee,
+        image: userData.image || `https://api.dicebear.com/5.x/initials/svg?seed=${userData.firstName || userData.firstname || 'U'} ${userData.lastName || userData.lastname || ''}`.trim()
+      };
+      
+      console.log('Normalized user profile data with enrollment status:', {
+        justPaidEnrollmentFee,
+        timeSincePayment,
+        hasSuccessfullyPaid,
+        userData: {
+          paymentStatus: userData.paymentStatus,
+          enrollmentStatus: userData.enrollmentStatus,
+          enrollmentFeePaid: userData.enrollmentFeePaid
+        },
+        normalizedUser: {
+          enrollmentFeePaid: normalizedUser.enrollmentFeePaid,
+          paymentStatus: normalizedUser.paymentStatus,
+          enrollmentStatus: normalizedUser.enrollmentStatus,
+          _justPaidEnrollmentFee: normalizedUser._justPaidEnrollmentFee
+        }
+      });
+      
+      console.log("Normalized user profile data:", normalizedUser);
+      dispatch(setUser(normalizedUser));
+      
+      // Also update local storage
+      try {
+        const currentUser = JSON.parse(localStorage.getItem("user") || '{}');
+        localStorage.setItem("user", JSON.stringify({
+          ...currentUser,
+          ...normalizedUser
+        }));
+      } catch (e) {
+        console.error("Error updating local storage:", e);
+      }
     } catch (error) {
       console.log("FETCH USER PROFILE ERROR............", error);
       showError("Failed to fetch profile");

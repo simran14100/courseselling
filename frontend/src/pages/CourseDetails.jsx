@@ -125,10 +125,19 @@ const CourseDetails = () => {
       return;
     }
 
-    if (!user?.enrollmentFeePaid) {
+    // Check if we just made a payment
+    const lastPayment = localStorage.getItem('lastEnrollmentPayment');
+    const paymentTime = lastPayment ? parseInt(lastPayment, 10) : 0;
+    const timeSincePayment = Date.now() - paymentTime;
+    const justPaidEnrollmentFee = timeSincePayment < 300000; // 5 minutes window
+
+    if (!user?.enrollmentFeePaid && !justPaidEnrollmentFee) {
       showError('Please complete enrollment fee payment before purchasing courses');
       navigate('/enrollment-payment');
       return;
+    } else if (justPaidEnrollmentFee) {
+      console.log('Recently completed enrollment payment, proceeding with course purchase');
+      // The payment was just made, so we can proceed without showing an error
     }
 
     if (isUserEnrolled) {

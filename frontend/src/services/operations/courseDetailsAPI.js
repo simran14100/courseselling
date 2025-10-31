@@ -575,39 +575,55 @@ export const getFullDetailsOfCourse = async (courseId, token) => {
 
 
 export const markLectureAsComplete = async (data, token) => {
-  let result = null
-  console.log("mark complete data", data)
-  const toastId = showLoading("Loading...")
+  let result = { success: false };
+  console.log("markLectureAsComplete - Input data:", data);
+  const toastId = showLoading("Updating your progress...");
+  
   try {
     const response = await apiConnector("POST", LECTURE_COMPLETION_API, data, {
       Authorization: `Bearer ${token}`,
-    })
-    console.log(
-      "MARK_LECTURE_AS_COMPLETE_API API RESPONSE............",
-      response
-    )
+    });
+    
+    console.log("MARK_LECTURE_AS_COMPLETE_API API RESPONSE:", response);
 
-    if (!response.data.message) {
-      throw new Error(response.data.error)
-    }
-    showSuccess("Lecture Completed")
-    result = true
-  } catch (error) {
-    console.log("MARK_LECTURE_AS_COMPLETE_API API ERROR............", error)
-    // Treat already-completed as a successful, idempotent operation
-    const status = error?.response?.status
-    const errMsg = error?.response?.data?.error || error?.message
-    if (status === 400 && errMsg === "Subsection already completed") {
-      showSuccess("Lecture already marked as completed")
-      result = true
+    if (response.data.success) {
+      showSuccess("Progress updated successfully");
+      result = { 
+        success: true,
+        data: response.data.data || {}
+      };
     } else {
-      showError(errMsg || "Failed to update progress")
-      result = false
+      throw new Error(response.data.error || "Failed to update progress");
     }
+  } catch (error) {
+    console.error("MARK_LECTURE_AS_COMPLETE_API ERROR:", error);
+    
+    // Handle specific error cases
+    const status = error?.response?.status;
+    const errMsg = error?.response?.data?.error || error?.message;
+    
+    // Treat already-completed as a successful, idempotent operation
+    if (status === 400 && errMsg?.includes("already completed")) {
+      showSuccess("Lecture already marked as completed");
+      result = { 
+        success: true, 
+        alreadyCompleted: true,
+        data: error.response?.data?.data || {}
+      };
+    } else {
+      showError(errMsg || "Failed to update progress");
+      result = { 
+        success: false, 
+        error: errMsg || "Failed to update progress" 
+      };
+    }
+  } finally {
+    dismissToast(toastId);
   }
-  dismissToast(toastId)
-  return result
-}
+  
+  console.log("markLectureAsComplete - Result:", result);
+  return result;
+};
 
 // create a rating for course
 export const createRating = async (data, token) => {

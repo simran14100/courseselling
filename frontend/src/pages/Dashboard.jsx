@@ -17,42 +17,8 @@ const Dashboard = ({ isEnrolledStudentView = false }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserUniversityStatus = async () => {
-      try {
-        // Fetch university registration status
-        const response = await apiConnector(
-          'GET',
-          '/api/v1/university/registered-students/my-status',
-          null,
-          {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        );
-
-        if (response?.data?.success && response.data?.data?.matched) {
-          const newStatus = response.data.data.status;
-          // Only update if status has changed
-          if (user.universityStatus !== newStatus) {
-            dispatch(setUser({
-              ...user,
-              universityStatus: newStatus,
-              isUniversityStudent: newStatus === 'approved'
-            }));
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching university status:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (user?.accountType === 'Student') {
-      fetchUserUniversityStatus();
-    } else {
-      setLoading(false);
-    }
+    // University status check removed as it's not implemented in the backend
+    setLoading(false);
 
     // Redirect SuperAdmin to /dashboard/my-profile
     if (user?.accountType === ACCOUNT_TYPE.SUPER_ADMIN && window.location.pathname === '/dashboard') {

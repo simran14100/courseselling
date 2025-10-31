@@ -180,49 +180,11 @@ const Navbar = () => {
     dispatch(logout(navigate));
   };
 
-  // University navigation: check universityregisteredstudent status and route accordingly
-const handleUniversityNav = async (e) => {
-  e.preventDefault();
-
-  
-  if (!token) {
-    navigate('/university/schools');
-    return;
-  }
-
-  let isApproved = false;
-  try {
-    const regStatus = await apiConnector(
-      'GET',
-      '/api/v1/university/registered-students/my-status',
-      null,
-      {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      }
-    );
-
-    if (regStatus?.data?.success && regStatus.data?.data?.matched) {
-      const status = regStatus.data.data.status;
-      if (status === 'approved' || status === 'Approved') {
-        isApproved = true;
-        console.log('✅ University registration status: approved');
-      } else {
-        console.log('ℹ️ University registration status:', status);
-      }
-    } else {
-      console.log('ℹ️ University registration not matched');
-    }
-  } catch (e) {
-    console.warn('University registration status check failed (non-blocking):', e?.response?.data || e.message);
-  }
-
-  if (isApproved) {
-    navigate('/university/approved', { replace: true });
-  } else {
+  // University navigation
+  const handleUniversityNav = (e) => {
+    e.preventDefault();
     navigate('/university/schools', { replace: true });
-  }
-};
+  };
 
   const hide =
   location.pathname === "/admin/login" ||

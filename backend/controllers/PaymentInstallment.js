@@ -214,10 +214,11 @@ exports.createInstallmentPaymentOrder = async (req, res) => {
             });
         }
 
-        if (installmentDetail.status === 'Paid') {
+        if (installmentDetail.status === 'Completed') {
             return res.status(400).json({
                 success: false,
-                message: 'This installment is already paid'
+                message: 'This installment is already paid',
+                alreadyPaid: true
             });
         }
 
@@ -309,7 +310,7 @@ exports.verifyInstallmentPayment = async (req, res) => {
         }
 
         // Update installment details
-        installmentDetail.status = 'Paid';
+        installmentDetail.status = 'Completed';
         installmentDetail.paidAt = new Date();
         installmentDetail.paymentId = razorpay_payment_id;
         installmentDetail.orderId = razorpay_order_id;

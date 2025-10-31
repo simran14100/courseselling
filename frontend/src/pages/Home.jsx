@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { getAllCourses, fetchCourseCategories } from '../services/operations/courseDetailsAPI';
 import { getAllInstructors } from '../services/operations/adminApi';
@@ -15,12 +15,19 @@ const Home = () => {
   const [isLoadingTopClass, setIsLoadingTopClass] = useState(true);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isLoadingInstructors, setIsLoadingInstructors] = useState(true);
-  const [ref, inView] = useInView({
+  
+  const [sectionRef, inView] = useInView({
     triggerOnce: true,
     threshold: 0.1
   });
+  
+  const sectionNode = useRef(null);
+  
+  const setSectionRef = (node) => {
+    sectionNode.current = node;
+    sectionRef(node);
+  };
 
-    // Fetch all courses and filter them for different sections
   useEffect(() => {
     const fetchAllCourses = async () => {
       try {
@@ -592,7 +599,7 @@ const Home = () => {
       {/* Course Section - Dynamic from Backend */}
       <motion.section 
         className="course-section bg-grey pt-120 pb-120"
-        ref={ref}
+        ref={setSectionRef}
         initial={{ opacity: 0 }}
         animate={inView ? { opacity: 1 } : { opacity: 0 }}
         transition={{ duration: 0.8 }}

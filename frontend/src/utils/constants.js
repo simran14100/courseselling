@@ -69,9 +69,9 @@ export const API_ENDPOINTS = {
     SEND_PAYMENT_SUCCESS_EMAIL_API: "/api/v1/payment/sendPaymentSuccessEmail",
     
     // Enrollment endpoints
-    CREATE_ENROLLMENT_ORDER_API: "/api/v1/enrollment/create-order",
-    VERIFY_ENROLLMENT_PAYMENT_API: "/api/v1/enrollment/verify-payment",
-    GET_ENROLLMENT_STATUS_API: "/api/v1/enrollment/status",
+    CREATE_ENROLLMENT_ORDER_API: "/api/v1/enrollments/create-order",
+    VERIFY_ENROLLMENT_PAYMENT_API: "/api/v1/enrollments/verify-payment",
+    GET_ENROLLMENT_STATUS_API: "/api/v1/enrollments/status",
     
     // Admin endpoints
     GET_REGISTERED_USERS_API: "/api/v1/admin/registered-users",

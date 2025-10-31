@@ -3,22 +3,9 @@ const express = require("express")
 const router = express.Router()
 
 // Import the required controllers and middleware functions
-const {
-  login,
-  signup,
-  changePassword,
-  sendotp,
-  refreshToken,
-  checkUserExists,
-  logout,
-  verifySession
-} = require("../controllers/Auth")
-const {
-  resetPasswordToken,
-  resetPassword,
-} = require("../controllers/ResetPassword")
-
-const { auth } = require("../middlewares/auth")
+const authController = require("../controllers/Auth");
+const resetPasswordController = require("../controllers/ResetPassword");
+const { auth } = require("../middlewares/auth");
 
 // Routes for Login, Signup, and Authentication
 
@@ -27,10 +14,10 @@ const { auth } = require("../middlewares/auth")
 // ********************************************************************************************************
 
 // Check if user exists by email
-router.post("/check-email", checkUserExists)
+router.post("/check-email", authController.checkUserExists)
 
 // Verify user session
-router.get("/verify-session", auth, verifySession)
+router.get("/verify-session", auth, authController.verifySession)
 
 // Secure email gate: if a secureAllowedEmail cookie is present, only that email may login
 function secureEmailGate(req, res, next) {
@@ -45,7 +32,14 @@ function secureEmailGate(req, res, next) {
 }
 
 // Route for user login (enforced by secureEmailGate if cookie is present)
-router.post("/login", secureEmailGate, login)
+router.post("/login", (req, res, next) => {
+  console.log('Login route hit!');
+  console.log('Request method:', req.method);
+  console.log('Request URL:', req.originalUrl);
+  console.log('Request headers:', req.headers);
+  console.log('Request body:', req.body);
+  next();
+}, secureEmailGate, authController.login)
 
 // Secret link to scope login to a specific admin without exposing email/password in URL
 router.get('/secure/dashboard-7x3k9', (req, res) => {
@@ -118,32 +112,32 @@ router.get('/secure/clear', (req, res) => {
 })
 
 // Route for user signup
-router.post("/signup", signup)
+router.post("/signup", authController.signup)
 
 // Route for sending OTP to the user's email
-router.post("/sendotp", sendotp)
+router.post("/sendotp", authController.sendotp)
 
 // Route for refreshing token - no auth middleware as we're using the refresh token for authentication
 router.post("/refresh-token", (req, res) => {
   // The refreshToken controller will handle the request directly
-  refreshToken(req, res);
+  authController.refreshToken(req, res);
 })
 
 // Route for user logout
-router.post("/logout", auth, logout)
+router.post("/logout", auth, authController.logout)
 
 // Route for Changing the password
-router.post("/changepassword", auth, changePassword)
+router.post("/changepassword", auth, authController.changePassword)
 
 // ********************************************************************************************************
 //                                      Reset Password
 // ********************************************************************************************************
 
 // Route for generating a reset password token
-router.post("/reset-password-token", resetPasswordToken)
+router.post("/reset-password-token", resetPasswordController.resetPasswordToken)
 
 // Route for resetting user's password after verification
-router.post("/reset-password", resetPassword)
+router.post("/reset-password", resetPasswordController.resetPassword)
 
 // Export the router for use in the main application
 module.exports = router

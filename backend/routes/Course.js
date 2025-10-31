@@ -44,37 +44,73 @@ const {
 // ********************************************************************************************************
 //                                      Sub-Section Routes
 // ********************************************************************************************************
-router.post("/addSubSection", auth, async (req, res) => {
+router.post("/addSubSection", auth, uploadCourseFiles, async (req, res) => {
   try {
+    console.log('[addSubSection] Request received:', {
+      method: req.method,
+      url: req.originalUrl,
+      body: req.body,
+      files: req.files,
+      user: req.user ? { id: req.user.id, email: req.user.email, accountType: req.user.accountType } : 'No user'
+    });
+
     // Check user role
-    if (req.user.accountType !== 'Instructor' && req.user.accountType !== 'Admin'&& req.user.accountType !== 'SuperAdmin') {
+    if (!['Instructor', 'Admin', 'SuperAdmin'].includes(req.user.accountType)) {
+      console.log('[addSubSection] Unauthorized access attempt:', req.user.accountType);
       return res.status(403).json({
         success: false,
         message: "Only instructors and admins can add subsections"
       });
     }
     
+    // Get data from form fields
     const { sectionId, title, description, videoUrl, duration } = req.body;
     
+    // Log the parsed body
+    console.log('[addSubSection] Parsed request body:', {
+      sectionId,
+      title,
+      description: description ? `${description.substring(0, 30)}...` : 'undefined',
+      videoUrl: videoUrl ? `${videoUrl.substring(0, 50)}...` : 'undefined',
+      duration
+    });
+    
     // Validate required fields
-    if (!sectionId || !title || !videoUrl) {
+    if (!sectionId || !title) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: sectionId, title, and videoUrl are required'
+        message: 'Missing required fields: sectionId and title are required'
       });
     }
+
+    // Check if we have either a video file or a video URL
+    const videoFile = req.files?.video?.[0];
     
-    // Create subsection with the provided Cloudinary URL
+    if (!videoFile && !videoUrl) {
+      return res.status(400).json({
+        success: false,
+        message: 'Either a video file or video URL is required'
+      });
+    }
+
+    // Prepare the data for the controller
     const processedReq = {
       ...req,
       body: {
         sectionId,
         title,
         description: description || '',
-        videoUrl,
+        videoUrl: videoUrl || (videoFile ? videoFile.path : ''),
         duration: duration || 0
       }
     };
+    
+    console.log('[addSubSection] Processed request:', {
+      sectionId,
+      title,
+      hasVideoFile: !!videoFile,
+      videoUrl: videoUrl || (videoFile ? 'File uploaded' : 'No video')
+    });
     
     return createSubSection(processedReq, res);
     
@@ -201,26 +237,50 @@ router.get("/getAdminCourses", auth, isAdminOrSuperAdmin, getAdminCourses)
 router.delete("/deleteCourse", auth, isAdminLevel, deleteCourse)
 
 // Edit Course routes - Allow both Admins and approved Instructors
-router.post("/editCourse", auth, async (req, res, next) => {
+router.post("/editCourse", auth, uploadCourseFiles, async (req, res, next) => {
   try {
-    console.log('Edit course request body:', req.body);
-    console.log('Edit course files:', req.files);
+    console.log('=== EDIT COURSE REQUEST ===');
+    console.log('Request Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Request Body:', req.body);
+    console.log('Request Files:', req.files ? Object.keys(req.files) : 'No files');
     
-    // Check user permissions
-    if (!['Admin', 'SuperAdmin', 'Content-management'].includes(req.user.accountType) &&
-        !(req.user.accountType === 'Instructor' && req.user.isApproved)) {
+    // Check if user is authorized to edit courses
+    if (!['Instructor', 'Admin', 'SuperAdmin'].includes(req.user.accountType)) {
       return res.status(403).json({
         success: false,
         message: 'You need to be an Admin or approved Instructor to edit courses'
       });
     }
 
-    // Debug log the request body and files
-    console.log('Edit Course - Request Body:', JSON.stringify(req.body, null, 2));
-    console.log('Edit Course - Files:', req.files ? Object.keys(req.files) : 'No files');
+    // Parse the course data from the request
+    let courseData = {};
+    
+    // If content-type is application/json, the data is in req.body
+    if (req.headers['content-type'] === 'application/json') {
+      courseData = req.body;
+    } 
+    // If it's form-data, we need to handle it differently
+    else if (req.body && typeof req.body === 'object') {
+      // If course data was sent as JSON string in a field
+      if (req.body.courseData) {
+        try {
+          courseData = JSON.parse(req.body.courseData);
+        } catch (e) {
+          console.error('Error parsing courseData:', e);
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid course data format',
+            error: e.message
+          });
+        }
+      } else {
+        // If fields were sent as individual form fields
+        courseData = { ...req.body };
+      }
+    }
     
     // Check for course ID in both body and query params
-    const courseId = req.body.courseId || req.body._id || req.query.courseId;
+    const courseId = courseData.courseId || courseData._id || req.query.courseId;
     
     // Validate course ID
     if (!courseId) {
@@ -384,9 +444,23 @@ router.get("/getAllCourses", getAllCourses)
 router.post("/getCourseDetails", getCourseDetails)
 router.post("/getFullCourseDetails", getFullCourseDetails)
 // To Update Course Progress
-router.post("/updateCourseProgress", auth, isStudent, updateCourseProgress)
+router.post("/updateCourseProgress", auth, isStudent, async (req, res) => {
+  try {
+    console.log('Update course progress request received:', req.body);
+    await updateCourseProgress(req, res);
+  } catch (error) {
+    console.error('Error in updateCourseProgress route:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update course progress',
+      error: error.message
+    });
+  }
+});
+
 // To get Course Progress
 // router.post("/getProgressPercentage", auth, isStudent, getProgressPercentage)
+
 // Delete a Course
 
 

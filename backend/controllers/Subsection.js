@@ -5,47 +5,78 @@ const { uploadVideoToCloudinary } = require("../utils/imageUploader");
 
 // Create a new sub-section for a given section
 exports.createSubSection = async (req, res) => {
+  console.log('[createSubSection] Starting subsection creation with data:', {
+    body: req.body,
+    user: req.user ? { id: req.user.id, email: req.user.email } : 'No user'
+  });
+
   try {
     const { sectionId, title, description, videoUrl, duration } = req.body;
 
-    console.log("[createSubSection] Request received:", {
+    console.log('[createSubSection] Extracted data:', {
       sectionId,
       title: title ? `${title.substring(0, 30)}...` : 'undefined',
       description: description ? `${description.substring(0, 50)}...` : 'undefined',
       hasVideo: !!videoUrl,
-      videoUrl: videoUrl ? `${videoUrl.substring(0, 60)}...` : 'undefined'
+      videoUrl: videoUrl ? `${videoUrl.substring(0, 60)}...` : 'undefined',
+      duration
     });
 
     // Validate required fields
     if (!sectionId || !title) {
+      const errorMsg = `Missing required fields: ${!sectionId ? 'sectionId ' : ''}${!title ? 'title' : ''}`;
+      console.error('[createSubSection] Validation error:', errorMsg);
       return res.status(400).json({
         success: false,
-        message: "Missing required fields: sectionId and title are required"
+        message: errorMsg.trim(),
+        receivedData: { sectionId, title }
       });
     }
 
     if (!videoUrl) {
+      console.error('[createSubSection] No video URL provided');
       return res.status(400).json({
         success: false,
-        message: "Video URL is required"
+        message: "Video URL is required",
+        receivedData: { videoUrl }
       });
     }
 
     // Validate section exists
+    console.log(`[createSubSection] Looking for section with ID: ${sectionId}`);
     const section = await Section.findById(sectionId);
     if (!section) {
+      console.error(`[createSubSection] Section not found with ID: ${sectionId}`);
       return res.status(404).json({
         success: false,
-        message: "Section not found"
+        message: `Section not found with ID: ${sectionId}`,
+        sectionId
       });
     }
+    console.log(`[createSubSection] Found section:`, {
+      sectionId: section._id,
+      sectionTitle: section.sectionName || 'No title',
+      courseId: section.courseId || 'No course ID'
+    });
 
     // Create the SubSection document
-    const SubSectionDetails = await SubSection.create({
+    console.log('[createSubSection] Creating subsection with:', {
       title,
+      description: description ? 'Description provided' : 'No description',
+      videoUrl: videoUrl ? 'Video URL provided' : 'No video URL',
+      duration: duration || 'Not specified'
+    });
+
+    const SubSectionDetails = await SubSection.create({
+      title: title.trim(),
       timeDuration: duration ? `${Math.round(duration)}` : '0',
-      description: description || '',
-      videoUrl,
+      description: (description || '').trim(),
+      videoUrl: videoUrl.trim(),
+    });
+
+    console.log('[createSubSection] Subsection created successfully:', {
+      subsectionId: SubSectionDetails._id,
+      title: SubSectionDetails.title
     });
 
     // Push into Section

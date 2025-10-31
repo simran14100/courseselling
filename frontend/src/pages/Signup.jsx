@@ -11,10 +11,10 @@ const TEXT_DARK = '#191A1F';
 
 const accountTypes = [
   { value: 'Student', label: 'Student' },
-  // { value: 'Instructor', label: 'Instructor' },
-  // { value: 'Admin', label: 'Admin' },
-  // { value: 'SuperAdmin', label: 'Super Admin' },
-  // { value: 'Staff', label: 'Staff' },
+  { value: 'Instructor', label: 'Instructor' },
+  { value: 'Admin', label: 'Admin' },
+  { value: 'SuperAdmin', label: 'Super Admin' },
+  { value: 'Staff', label: 'Staff' },
 ];
 
 const validateEmail = (email) => {
@@ -36,7 +36,7 @@ const Signup = () => {
     lastName: '',
     email: '',
     phone: '',
-    accountType: 'Student',
+    accountType: 'Student', // Default account type
     password: '',
     confirmPassword: '',
     otp: '',
@@ -97,8 +97,15 @@ const Signup = () => {
           additionalData,
           // Pass a callback that will be called after successful signup
           (userData) => {
-            // After successful signup, navigate to the redirect path
-            navigate(redirectPath);
+            // Check if the backend provided a redirect URL, otherwise default to login
+            const redirectTo = userData?.redirectTo || '/login';
+            // Navigate to the specified path
+            navigate(redirectTo, {
+              state: {
+                message: 'Registration successful! Please login to continue.',
+                email: form.email
+              }
+            });
           }
         )
       );

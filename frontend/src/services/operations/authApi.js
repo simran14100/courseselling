@@ -314,15 +314,20 @@ export function signUp(
         dispatch(setUser(userWithImage));
         showSuccess(response.data.message || "Registration successful!");
 
-        // Navigate to the appropriate page
-        const redirectTo = response.data.redirectTo || "/dashboard/my-profile";
-        navigate(redirectTo);
+        // Always navigate to login page after successful registration
+        showSuccess("Registration successful! Please login to continue.");
+        navigate("/login", {
+          state: {
+            message: 'Registration successful! Please login to continue.',
+            email: email
+          }
+        });
 
         return {
           success: true,
           user: userWithImage,
           data: response.data,
-          redirectTo
+          message: 'Registration successful! Please login to continue.'
         };
       }
 
@@ -1268,14 +1273,20 @@ export const logout = (navigate = null) => async (dispatch) => {
       logoutToastShown = true;
     }
 
-    // Determine where to navigate after logout
+    // Always redirect to /login after logout
     let redirectPath = '/login';
-
-    // If we're not already on an auth page, store the current path for post-login redirect
-    if (!isAuthPage && currentPath && !currentPath.includes('logout')) {
-      const loginUrl = new URL('/login', window.location.origin);
-      loginUrl.searchParams.set('redirect', currentPath);
-      redirectPath = loginUrl.pathname + loginUrl.search;
+    
+    // If we have a redirect parameter in the URL, use it
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectParam = urlParams.get('redirect');
+    
+    // Only use the redirect parameter if it's a relative path and not an auth page
+    if (redirectParam && 
+        redirectParam.startsWith('/') && 
+        !redirectParam.startsWith('/university/') && 
+        !redirectParam.startsWith('/login') && 
+        !redirectParam.startsWith('/signup')) {
+      redirectPath = redirectParam;
     }
 
     // Use the navigate function if provided, otherwise use window.location

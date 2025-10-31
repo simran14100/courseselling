@@ -66,6 +66,15 @@ export const course = {
     CREATE_SECTION_API: "/api/v1/course/addSection",
     UPDATE_SECTION_API: "/api/v1/course/updateSection",
     DELETE_SECTION_API: "/api/v1/course/deleteSection",
+    // Enrollment Payment
+    CREATE_ENROLLMENT_ORDER_API: "/api/v1/enrollments/create-order",
+    VERIFY_ENROLLMENT_PAYMENT_API: "/api/v1/enrollments/verify-payment",
+    GET_ENROLLMENT_STATUS_API: "/api/v1/enrollments/status",
+    // Course Payment
+    CAPTURE_PAYMENT_API: "/api/v1/payment/capturePayment",
+    VERIFY_PAYMENT_API: "/api/v1/payment/verifyPayment",
+    SEND_PAYMENT_SUCCESS_EMAIL_API: "/api/v1/payment/sendPaymentSuccessEmail",
+    GET_RAZORPAY_KEY_API: "/api/v1/payment/getRazorpayKey",
     CREATE_SUBSECTION_API: "/api/v1/course/addSubSection",
     UPDATE_SUBSECTION_API: "/api/v1/course/updateSubSection",
     DELETE_SUBSECTION_API: "/api/v1/course/deleteSubSection",
@@ -86,13 +95,14 @@ export const payment = {
 // Enrollment API endpoints
 export const enrollment = {
     // Payment related
-    CREATE_ENROLLMENT_ORDER_API: "/api/v1/enrollment/create-order",
-    VERIFY_ENROLLMENT_PAYMENT_API: "/api/v1/enrollment/verify-payment",
+    CREATE_ENROLLMENT_ORDER_API: "/api/v1/enrollments/create-order",
+    VERIFY_ENROLLMENT_PAYMENT_API: "/api/v1/enrollments/verify-payment",
     
     // Enrollment management
-    CHECK_ENROLLMENT: "/api/v1/enrollment/status",  // Updated to use the new endpoint
-    CREATE_ENQUIRY: "/api/v1/enrollment/enquiry",
-    GET_ENROLLMENT_STATUS: "/api/v1/enrollment/status",
+    CHECK_ENROLLMENT: "/api/v1/enrollments/status",  // Updated to use the new endpoint
+    CREATE_ENQUIRY: "/api/v1/enrollments/enquiry",
+    GET_ENROLLMENT_STATUS: "/api/v1/enrollments/status",
+    RESET_ENROLLMENT_STATUS_API: "/api/v1/enrollments/reset-status",
     
     // Program selection and admission
     CREATE_BASIC_ENQUIRY: "/api/v1/enrollment/select-program",

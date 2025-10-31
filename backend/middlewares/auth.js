@@ -141,21 +141,39 @@ exports.isTrainerManager = async (req, res, next) => {
   }
 };
 exports.isStudent = async (req, res, next) => {
-	try {
-		const userDetails = await User.findOne({ email: req.user.email });
+    try {
+        // Check if user is already verified by the auth middleware
+        if (req.user && req.user.accountType === 'Student') {
+            return next();
+        }
 
-		if (userDetails.accountType !== "Student") {
-			return res.status(401).json({
-				success: false,
-				message: "This is a Protected Route for Students",
-			});
-		}
-		next();
-	} catch (error) {
-		return res
-			.status(500)
-			.json({ success: false, message: `User Role Can't be Verified` });
-	}
+        // Fallback to database check if accountType is not in token
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required',
+            });
+        }
+
+        const userDetails = await User.findById(req.user.id);
+        if (!userDetails || userDetails.accountType !== 'Student') {
+            return res.status(403).json({
+                success: false,
+                message: 'This is a protected route for Students only',
+            });
+        }
+        
+        // Update request user with the latest details
+        req.user = userDetails;
+        next();
+    } catch (error) {
+        console.error('Error in isStudent middleware:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error verifying user role',
+            error: error.message,
+        });
+    }
 };
 exports.isAdmin = async (req, res, next) => {
   try {

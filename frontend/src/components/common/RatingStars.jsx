@@ -28,9 +28,8 @@ function RatingStars({ courseId, Star_Size }) {
     try {
       console.log("Making API request...");
       const response = await apiConnector(
-        "GET", // Matches backend method
-          course.GET_AVERAGE_RATING_API, // Using your constant
-        { courseId }
+        "GET",
+        `${course.GET_AVERAGE_RATING_API}?courseId=${courseId}`
       );
 
       console.log("API Response:", response);
