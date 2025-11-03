@@ -3,9 +3,29 @@ services:
     name: coursewebmok
     env: node
     buildCommand: |
-      chmod +x ./render-build.sh
-      ./render-build.sh
-    startCommand: node server.js
+      echo "=== Starting build process ==="
+      echo "Current directory: $(pwd)"
+      echo "Directory contents:"
+      ls -la
+      
+      # Install backend dependencies
+      echo "Installing backend dependencies..."
+      npm install
+      
+      # Install frontend dependencies and build
+      echo "Building frontend..."
+      cd frontend
+      npm install
+      npm run build
+      cd ..
+      
+      echo "=== Build completed successfully ==="
+      echo "Final directory structure:"
+      ls -la
+      
+    startCommand: |
+      chmod +x ./start.sh
+      ./start.sh
     envVars:
       - key: NODE_ENV
         value: production
