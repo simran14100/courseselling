@@ -39,20 +39,42 @@ let toastId = null; // Module-level variable to track the toast ID
 let isLoading = false; // Flag to track loading state
 
 export const getAllCourses = async () => {
-  const toastId = showLoading("Loading...")
-  let result = []
+  const toastId = showLoading("Loading courses...");
+  let result = [];
   try {
-    const response = await apiConnector("GET", GET_ALL_COURSES_API)
-    if (!response?.data?.success) {
-      throw new Error("Could Not Fetch Courses")
+    console.log('Fetching all courses from:', GET_ALL_COURSES_API);
+    const response = await apiConnector("GET", GET_ALL_COURSES_API);
+    console.log('API Response:', response);
+    
+    if (!response) {
+      throw new Error('No response received from server');
     }
-    result = response?.data?.data
+    
+    if (!response.data) {
+      console.error('No data in response:', response);
+      throw new Error('No data received from server');
+    }
+    
+    if (!response.data.success) {
+      console.error('API Error:', response.data.message || 'Unknown error');
+      throw new Error(response.data.message || "Could not fetch courses");
+    }
+    
+    if (!Array.isArray(response.data.data)) {
+      console.error('Unexpected data format:', response.data);
+      throw new Error('Invalid data format received from server');
+    }
+    
+    console.log(`Successfully fetched ${response.data.data.length} courses`);
+    result = response.data.data;
   } catch (error) {
-    console.log("GET_ALL_COURSES_API API ERROR............", error)
-    showError(error.message)
+    console.error("GET_ALL_COURSES_API API ERROR............", error);
+    showError(error.message || 'Failed to load courses');
+    result = [];
+  } finally {
+    dismissToast(toastId);
   }
-  dismissToast(toastId)
-  return result
+  return result;
 }
 
 export const fetchCourseDetails = async (courseId) => {
@@ -87,19 +109,48 @@ export const fetchCourseDetails = async (courseId) => {
 
 // fetching the available course categories
 export const fetchCourseCategories = async () => {
-  let result = []
+  let result = [];
+  const toastId = showLoading("Loading categories...");
   try {
-    const response = await apiConnector("GET", SHOW_ALL_CATEGORIES_API)
-    console.log("SHOW_ALL_CATEGORIES_API API RESPONSE............", response)
-    if (!response?.data?.success) {
-      throw new Error("Could Not Fetch Course Categories")
+    // Use the correct endpoint from the categories object in apis.js
+    const CATEGORIES_API = "/api/v1/course/showAllCategories";
+    console.log("Fetching categories from:", CATEGORIES_API);
+    
+    const response = await apiConnector("GET", CATEGORIES_API);
+    console.log("Categories API Response:", response);
+    
+    if (!response) {
+      throw new Error("No response from server");
     }
-    result = response?.data?.data
+    
+    // Check if response.data exists and has the expected structure
+    if (!response.data) {
+      throw new Error("No data in response");
+    }
+    
+    // The backend returns categories directly in response.data.categories
+    if (response.data.success && Array.isArray(response.data.categories)) {
+      result = response.data.categories;
+      console.log(`Successfully loaded ${result.length} categories`);
+    } else {
+      // Fallback: if categories is not in the expected format, try to handle different response structures
+      if (Array.isArray(response.data)) {
+        result = response.data;
+      } else if (response.data.data && Array.isArray(response.data.data)) {
+        result = response.data.data;
+      } else {
+        console.warn("Unexpected categories data format:", response.data);
+        result = [];
+      }
+    }
   } catch (error) {
-    console.log("SHOW_ALL_CATEGORIES_API API ERROR............", error)
-    showError(error.message)
+    console.error("Error fetching categories:", error);
+    showError(error.message || "Failed to load categories. Please try again later.");
+    result = [];
+  } finally {
+    dismissToast(toastId);
   }
-  return result
+  return result;
 }
 
 // fetching the available course sub-categories for a specific category

@@ -40,23 +40,45 @@ exports.createCategory= async(req , res)=>{
     }
 }
 
-//get alltags
-exports.showAllCategories = async(req , res)=>{
-    try{
-        const allCategorys = await Category.find({},{name:true , description:true});
+// Get all categories with course count and icon
+exports.showAllCategories = async (req, res) => {
+    try {
+        // Get all categories and populate the course count
+        const categories = await Category.aggregate([
+            {
+                $lookup: {
+                    from: 'courses',
+                    localField: '_id',
+                    foreignField: 'category',
+                    as: 'courses'
+                }
+            },
+            {
+                $project: {
+                    name: 1,
+                    description: 1,
+                    icon: { $ifNull: ['$icon', 'fa-book'] }, // Default icon if not set
+                    courseCount: { $size: '$courses' },
+                    createdAt: 1
+                }
+            },
+            { $sort: { name: 1 } } // Sort alphabetically by name
+        ]);
+
         res.status(200).json({
-            success:true,
-            message:"All Categories created successfully",
-            data: allCategorys,
+            success: true,
+            message: 'Categories fetched successfully',
+            categories: categories
+        });
+    } catch (err) {
+        console.error('Error fetching categories:', err);
+        return res.status(500).json({
+            success: false,
+            message: 'Error fetching categories',
+            error: err.message
         });
     }
-    catch(err){
-        return res.status(500).json({
-            success:false,
-            message:err.message,
-        })
-    }
-}
+};
 
 // Delete a category
 exports.deleteCategory = async (req, res) => {

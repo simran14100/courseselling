@@ -21,6 +21,7 @@ export const endpoints = {
   COURSE_DETAILS_API: `${BASE_URL}/course/getCourseDetails`,
   EDIT_COURSE_API: `${BASE_URL}/course/editCourse`,
   COURSE_CATEGORIES_API: `${BASE_URL}/course/showAllCategories`,
+  GET_ALL_CATEGORIES: `${BASE_URL}/course/categories`,
   
   // Fee Endpoints
   GET_STUDENT_FEES: `${BASE_URL}/api/v1/university/payments/fee-details`,

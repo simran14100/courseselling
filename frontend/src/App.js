@@ -22,6 +22,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import InstructorDashboard from "./pages/InstructorDashboard";
 import AdmissionConfirmation from "./pages/AdmissionConfirmation";
 import PaymentInstallments from "./pages/PaymentInstallments";
+import AllCourses from "./pages/AllCourses";
+import Categories from "./pages/Categories";
 import AdminProfile from './pages/AdminProfile';
 import Settings from "./components/common/setting/Settings";
 import AdminLayout from './components/common/AdminLayout';
@@ -68,7 +70,7 @@ import BulkUploadStudents from './components/core/Admin/StudentManagement/BulkUp
 import CreateUserType from './components/core/Admin/UserManagement/UserType/CreateUserType';
 import AllUserTypes from './components/core/Admin/UserManagement/UserType/AllUserTypes';
 import AdminMyCourses from './pages/AdminMyCourses';
-
+import FAQ from './components/core/Admin/FAQ/FAQ';
 
 
 import BatchDepartments from './components/core/Admin/BatchManagement/BatchDepartments';
@@ -153,9 +155,8 @@ function AppRoutes() {
       <Route path="/contact" element={<Contact />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
-   
-      
-      
+      <Route path="/courses" element={<AllCourses />} />
+      <Route path="/categories" element={<Categories />} />
       
       <Route path="/category/:categoryId" element={<Category />} />
       <Route path="/catalog/:catalogName" element={<Catalog />} />
@@ -290,6 +291,13 @@ function AppRoutes() {
           <Route path="/admin/course/allCourses" element={
             <ProtectedRoute allowedRoles={[ACCOUNT_TYPE.ADMIN, ACCOUNT_TYPE.INSTRUCTOR, ACCOUNT_TYPE.SUPER_ADMIN]}>
              <AllCourse />
+            </ProtectedRoute>
+          } />
+          
+          {/* FAQ Management */}
+          <Route path="/admin/faqs/*" element={
+            <ProtectedRoute allowedRoles={[ACCOUNT_TYPE.ADMIN, ACCOUNT_TYPE.SUPER_ADMIN]}>
+              <FAQ />
             </ProtectedRoute>
           } />
           

@@ -98,7 +98,8 @@ const superAdminRoutes = require("./routes/superAdmin");
 
 
 const cloudinaryRoutes = require("./routes/cloudinary");
-
+const categoryRoutes = require("./routes/category");
+const faqRoutes = require("./routes/faq.routes");
 
 
 
@@ -198,6 +199,8 @@ app.use("/api/v1/enrollments", enrollmentRoutes);
 app.use("/api/v1/sub-categories", subCategoryRoutes);
 app.use("/api/v1/enquiries", enquiryRoutes);
 app.use("/api/v1/installments", installmentRoutes);
+app.use("/api/v1/course", categoryRoutes);
+app.use("/api/v1/faq", faqRoutes);
 app.use("/api/v1/videos", videoRoutes);
 app.use("/api/v1/cart", cartRoutes);
 app.use("/api/v1/google", googleRoutes);

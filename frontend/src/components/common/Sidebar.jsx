@@ -351,6 +351,15 @@ const getSidebarLinks = (user, variant = 'default') => {
       },
       {
         id: 5,
+        name: "FAQ Management",
+        icon: <VscChecklist style={{ fontSize: 20, color: ED_TEAL }} />,
+        subLinks: [
+          { name: "All FAQs", path: "/admin/faqs" },
+          { name: "Create New FAQ", path: "/admin/faqs/create" }
+        ]
+      },
+      {
+        id: 5,
         name: "Course", 
         icon: <VscBook style={{ fontSize: 20, color: ED_TEAL }} />,
         subLinks: [

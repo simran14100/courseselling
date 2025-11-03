@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getAllCourses, fetchCourseCategories } from '../services/operations/courseDetailsAPI';
 import { getAllInstructors } from '../services/operations/adminApi';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import Footer from '../components/common/Footer';
+import DynamicFAQ from '../components/common/DynamicFAQ';
+import { toast } from 'react-hot-toast';
 
 const Home = () => {
   const [trendingCourses, setTrendingCourses] = useState([]);
@@ -15,6 +17,11 @@ const Home = () => {
   const [isLoadingTopClass, setIsLoadingTopClass] = useState(true);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isLoadingInstructors, setIsLoadingInstructors] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [allCourses, setAllCourses] = useState([]);
+  const navigate = useNavigate();
   
   const [sectionRef, inView] = useInView({
     triggerOnce: true,
@@ -36,20 +43,31 @@ const Home = () => {
         console.log("All courses fetched:", allCoursesData);
         
         if (allCoursesData && Array.isArray(allCoursesData)) {
+          // Store all courses for search functionality
+          setAllCourses(allCoursesData);
+          
           // Filter for trending courses (most selling - based on studentsEnrolled)
           const trendingData = allCoursesData
-            .sort((a, b) => (b.studentsEnrolled?.length || 0) - (a.studentsEnrolled?.length || 0))
+            .map(course => ({
+              ...course,
+              studentsEnrolled: Array.isArray(course.studentsEnrolled) ? course.studentsEnrolled : []
+            }))
+            .sort((a, b) => (b.studentsEnrolled.length || 0) - (a.studentsEnrolled.length || 0))
             .slice(0, 4);
           setTrendingCourses(trendingData);
           
           // Filter for top class courses (based on rating, allow some overlap if needed)
           const topClassData = allCoursesData
+            .map(course => ({
+              ...course,
+              ratingAndReviews: Array.isArray(course.ratingAndReviews) ? course.ratingAndReviews : []
+            }))
             .sort((a, b) => {
-              const ratingA = a.ratingAndReviews?.length > 0 
-                ? a.ratingAndReviews.reduce((sum, review) => sum + review.rating, 0) / a.ratingAndReviews.length 
+              const ratingA = a.ratingAndReviews.length > 0 
+                ? a.ratingAndReviews.reduce((sum, review) => sum + (review.rating || 0), 0) / a.ratingAndReviews.length 
                 : 0;
-              const ratingB = b.ratingAndReviews?.length > 0 
-                ? b.ratingAndReviews.reduce((sum, review) => sum + review.rating, 0) / b.ratingAndReviews.length 
+              const ratingB = b.ratingAndReviews.length > 0 
+                ? b.ratingAndReviews.reduce((sum, review) => sum + (review.rating || 0), 0) / b.ratingAndReviews.length 
                 : 0;
               return ratingB - ratingA;
             })
@@ -79,7 +97,14 @@ const Home = () => {
         console.log("Fetching categories for course categories section...");
         const categoriesData = await fetchCourseCategories();
         console.log("Categories fetched for course categories section:", categoriesData);
-        setCategories(categoriesData);
+        
+        if (categoriesData && Array.isArray(categoriesData)) {
+          console.log(`Successfully loaded ${categoriesData.length} categories`);
+          setCategories(categoriesData);
+        } else {
+          console.warn("No categories data received or invalid format:", categoriesData);
+          setCategories([]);
+        }
       } catch (error) {
         console.error("Error fetching categories:", error);
         setCategories([]);
@@ -134,6 +159,64 @@ const Home = () => {
       "/assets/img/service/course-img-7.png"
     ];
     return defaultImages[Math.floor(Math.random() * defaultImages.length)];
+  };
+
+  // Handle search functionality
+  const handleSearch = () => {
+    if (!searchQuery.trim()) {
+      toast.error('Please enter a search term');
+      return;
+    }
+
+    setIsSearching(true);
+    
+    // Perform search across courses, categories, and instructors
+    const query = searchQuery.toLowerCase().trim();
+    
+    // Search in courses
+    const courseResults = allCourses.filter(course => {
+      return (
+        course.courseName?.toLowerCase().includes(query) ||
+        course.courseDescription?.toLowerCase().includes(query) ||
+        course.category?.name?.toLowerCase().includes(query) ||
+        course.instructor?.name?.toLowerCase().includes(query)
+      );
+    });
+    
+    // Search in categories
+    const categoryResults = categories.filter(category => 
+      category.name?.toLowerCase().includes(query) ||
+      category.description?.toLowerCase().includes(query)
+    );
+    
+    // Search in instructors
+    const instructorResults = instructors.filter(instructor => 
+      instructor.name?.toLowerCase().includes(query) ||
+      instructor.bio?.toLowerCase().includes(query)
+    );
+    
+    // Combine all results
+    const results = {
+      courses: courseResults,
+      categories: categoryResults,
+      instructors: instructorResults
+    };
+    
+    setSearchResults(results);
+    setIsSearching(false);
+    
+    // Show toast if no results found
+    if (courseResults.length === 0 && categoryResults.length === 0 && instructorResults.length === 0) {
+      toast.error('No results found. Try different keywords.');
+    } else {
+      // Navigate to search results page or show results in a modal
+      // For now, we'll just show a success message
+      const totalResults = courseResults.length + categoryResults.length + instructorResults.length;
+      toast.success(`Found ${totalResults} result${totalResults !== 1 ? 's' : ''}`);
+      
+      // You can navigate to a search results page with the results
+      // navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+    }
   };
 
   // Helper function to get category icon based on category name
@@ -199,7 +282,7 @@ const Home = () => {
           </div>
           
           {/* Floating FAQ Text Box */}
-          <motion.div 
+          {/* <motion.div 
             className="faq-text-box"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
@@ -217,10 +300,10 @@ const Home = () => {
               </ul>
               <p><span>200+</span> <br />Instuctor</p>
             </div>
-          </motion.div>
+          </motion.div> */}
           
           {/* Floating Hero Text Box */}
-          <motion.div 
+          {/* <motion.div 
             className="hero-text-box"
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
@@ -236,7 +319,7 @@ const Home = () => {
               <h5 className="text-title">150K</h5>
               <span>Assisted Students</span>
             </div>
-          </motion.div>
+          </motion.div> */}
         </div>
         
         {/* Background Shapes */}
@@ -511,25 +594,35 @@ const Home = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 1.0 }}
                 >
-                  <form action="#" style={{ position: 'relative', display: 'flex', gap: '15px', alignItems: 'center' }}>
-                    <Link to="/catalog/all">
-                      <motion.button 
-                        className="ed-primary-btn"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        type="button"
-                      >
-                        Search Now <i className="fa-solid fa-arrow-right"></i>
-                      </motion.button>
-                    </Link>
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSearch();
+                  }} style={{ position: 'relative', display: 'flex', gap: '15px', alignItems: 'center' }}>
+                    <motion.button 
+                      className="ed-primary-btn"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      type="submit"
+                      disabled={isSearching}
+                    >
+                      {isSearching ? 'Searching...' : 'Search Now'} <i className="fa-solid fa-arrow-right"></i>
+                    </motion.button>
                     <div style={{ position: 'relative', flex: '1' }}>
                       <input 
                         type="text" 
-                        id="text" 
-                        name="text" 
+                        id="searchQuery"
+                        name="searchQuery"
                         className="form-control" 
-                        placeholder="What do you want to learn today?"
+                        placeholder="Search courses, categories, or instructors..."
                         style={{ paddingLeft: '50px' }}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSearch();
+                          }
+                        }}
                       />
                       <div className="icon" style={{ 
                         position: 'absolute', 
@@ -547,7 +640,7 @@ const Home = () => {
                 </motion.div>
                 
                 {/* About Counter Items */}
-                <motion.div 
+                {/* <motion.div 
                   className="about-counter-items mb-0"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -589,7 +682,7 @@ const Home = () => {
                       <p>Total active students taking <br />gifted courses</p>
                     </div>
                   </div>
-                </motion.div>
+                </motion.div> */}
               </motion.div>
             </div>
           </div>
@@ -651,7 +744,7 @@ const Home = () => {
               animate={inView ? { opacity: 1, x: 0 } : { opacity: 0, x: 20 }}
               transition={{ duration: 0.6, delay: 0.3 }}
             >
-              <Link to="/catalog/all" className="ed-primary-btn">
+              <Link to="/courses" className="ed-primary-btn">
                 Browse All Courses <i className="fa-solid fa-arrow-right"></i>
               </Link>
             </motion.div>
@@ -892,8 +985,8 @@ const Home = () => {
                 animate={inView ? { opacity: 1, x: 0 } : { opacity: 0, x: 20 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
               >
-                <Link to="/catalog" className="ed-primary-btn">
-                  Browse All Courses <i className="fa-solid fa-arrow-right"></i>
+                <Link to="/categories" className="ed-primary-btn">
+                  Browse All Course Categories <i className="fa-solid fa-arrow-right"></i>
                 </Link>
               </motion.div>
             </div>
@@ -905,7 +998,7 @@ const Home = () => {
                     Loading categories...
                   </div>
                 </div>
-              ) : categories.length > 0 ? (
+              ) : Array.isArray(categories) && categories.length > 0 ? (
                 categories.map((category, index) => (
                 <div key={index} className="col-xl-2 col-lg-3 col-md-4">
                   <div style={{ 
@@ -1527,7 +1620,7 @@ const Home = () => {
                   </h2>
                 </div>
                 
-                <div className="faq-accordion">
+                {/* <div className="faq-accordion">
                   <div className="accordion" id="accordionExample">
                     <div className="accordion-item" style={{ 
                       border: '1px solid #E8ECF0', 
@@ -1676,7 +1769,8 @@ const Home = () => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </div> */}
+                 <DynamicFAQ />
               </div>
             </div>
           </div>
@@ -1765,7 +1859,7 @@ const Home = () => {
                           </h3>
                           <span>Instructor</span>
                         </div>
-                        <div className="team-social">
+                        {/* <div className="team-social">
                           <div className="expand">
                             <i className="fa-solid fa-share-nodes"></i>
                           </div>
@@ -1775,7 +1869,7 @@ const Home = () => {
                             <li><a href="#" className="twitter"><i className="fab fa-behance"></i></a></li>
                             <li><a href="#" className="pinterest"><i className="fab fa-pinterest-p"></i></a></li>
                           </ul>
-                        </div>
+                        </div> */}
                       </div>
                     </div>
                   </div>
@@ -2271,10 +2365,11 @@ const Home = () => {
         </div>
       </section>
 
-     <Footer/>
+     
 
+      <Footer />
     </div>
   );
 };
 
-export default Home; 
+export default Home;
