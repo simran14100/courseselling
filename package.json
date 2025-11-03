@@ -4,7 +4,7 @@
   "description": "Backend for CourseWebmok application",
   "main": "./backend/index.js",
   "scripts": {
-    "start": "node backend/index.js",
+    "start": "cd backend && node index.js",
     "server": "nodemon backend/index.js",
     "render-start": "node server.js",
     "client": "cd frontend && npm start",
