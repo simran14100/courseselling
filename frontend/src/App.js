@@ -45,6 +45,7 @@ import Assignments from "./pages/Assignments";
 import AssignmentDetail from './pages/AssignmentDetail';
 import AdminNotifications from './pages/AdminNotifications';
 import Notifications from './pages/Notifications';
+import Blog from './pages/Admin/Blog';
 
 
 
@@ -224,6 +225,20 @@ function AppRoutes() {
         )}
       </Route>
 
+      {/* Admin Routes */}
+      {[ACCOUNT_TYPE.ADMIN, ACCOUNT_TYPE.SUPER_ADMIN].includes(user?.accountType) && (
+        <>
+          <Route path="admin/dashboard" element={<AdminDashboard />} />
+          <Route path="admin/users/*" element={<AllUsers />} />
+          <Route path="admin/notifications" element={<AdminNotifications />} />
+          <Route path="admin/blogs/*" element={
+            <ProtectedRoute allowedRoles={[ACCOUNT_TYPE.ADMIN, ACCOUNT_TYPE.SUPER_ADMIN]}>
+              <Blog />
+            </ProtectedRoute>
+          } />
+        </>
+      )}
+
       {/* Admin Routes (Admin + Instructor + SuperAdmin) */}
       {(user?.accountType === ACCOUNT_TYPE.ADMIN || user?.accountType === ACCOUNT_TYPE.INSTRUCTOR || user?.accountType === ACCOUNT_TYPE.SUPER_ADMIN) && (
         <>
@@ -298,6 +313,13 @@ function AppRoutes() {
           <Route path="/admin/faqs/*" element={
             <ProtectedRoute allowedRoles={[ACCOUNT_TYPE.ADMIN, ACCOUNT_TYPE.SUPER_ADMIN]}>
               <FAQ />
+            </ProtectedRoute>
+          } />
+          
+          {/* Blog Management */}
+          <Route path="/admin/blogs/*" element={
+            <ProtectedRoute allowedRoles={[ACCOUNT_TYPE.ADMIN, ACCOUNT_TYPE.INSTRUCTOR, ACCOUNT_TYPE.SUPER_ADMIN]}>
+              <Blog />
             </ProtectedRoute>
           } />
           

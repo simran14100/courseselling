@@ -102,7 +102,7 @@ const categoryRoutes = require("./routes/category");
 const faqRoutes = require("./routes/faq.routes");
 
 
-
+const blogRoutes = require('./routes/blogRoutes');
 const database = require("./config/database");
 const cookieParser = require("cookie-parser");
 const cloudinary = require('cloudinary').v2;
@@ -226,6 +226,11 @@ const { updateProfile } = require("./controllers/Profile");
 app.put("/api/v1/profile/updateProfile", auth, updateProfile);
 
 
+app.use('/api/v1/blog', blogRoutes);
+
+// Other routes
+
+
 
 
 
@@ -275,12 +280,21 @@ const startServer = (port) => {
   });
 };
 
-// Connect to database and start server
-database.connect()
-  .then(() => {
-    startServer(PORT);
-  })
-  .catch(() => {
-    console.error("Server not started due to DB connection failure");
-  });
+// Export the Express app for use in server.js
+module.exports = app;
 
+// Only start the server if this file is run directly (not required by another module)
+if (require.main === module) {
+  // Connect to database and start server
+  database.connect()
+    .then(() => {
+      const PORT = process.env.PORT || 4000;
+      app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error('Failed to connect to database:', err);
+      process.exit(1);
+    });
+}

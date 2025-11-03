@@ -2,10 +2,10 @@
   "name": "coursewebmok",
   "version": "1.0.0",
   "description": "Backend for CourseWebmok application",
-  "main": "backend/index.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node backend/index.js",
-    "server": "nodemon backend/index.js",
+    "start": "node server.js",
+    "server": "nodemon server.js",
     "client": "cd frontend && npm start",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "install-all": "npm install && cd frontend && npm install"

@@ -86,8 +86,16 @@ const upload = fileUpload({
   // File filter to validate file types
   fileFilter: (req, file, cb) => {
     try {
+      console.log(`Processing file upload: ${file.fieldname} - ${file.originalname} (${file.mimetype})`);
+      
       // Validate image files only
       const validImageTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+      
+      // For blog routes, only accept 'image' field
+      if (req.originalUrl.includes('/api/v1/blog') && file.fieldname !== 'image') {
+        console.log(`Skipping non-image field for blog upload: ${file.fieldname}`);
+        return cb(null, false);
+      }
       
       if (!validImageTypes.includes(file.mimetype)) {
         console.error(`Invalid file type: ${file.mimetype} for ${file.name}`);
@@ -211,47 +219,53 @@ const handleFileUpload = async (req, res, next) => {
             }
           });
 
-          // Validate required files
-          const requiredFiles = ['photo', 'signature'];
-          const missingFiles = [];
-          const invalidFiles = [];
+          // Skip file validation for blog routes
+          if (!req.originalUrl.includes('/api/v1/blog')) {
+            // Only require photo and signature for non-blog routes
+            const requiredFiles = ['photo', 'signature'];
+            const missingFiles = [];
+            const invalidFiles = [];
 
-          for (const field of requiredFiles) {
-            const file = req.files[field];
-            
-            if (!file) {
-              console.error(`Missing required file: ${field}`);
-              missingFiles.push(field);
-            } else if (file.truncated) {
-              console.error(`File too large: ${field} (${file.size} bytes)`);
-              invalidFiles.push(`${field} (file too large)`);
-            } else if (file.size === 0) {
-              console.error(`Empty file: ${field}`);
-              invalidFiles.push(`${field} (empty file)`);
-            } else {
-              console.log(`Valid file uploaded for ${field}`);
+            for (const field of requiredFiles) {
+              const file = req.files[field];
+              
+              if (!file) {
+                console.error(`Missing required file: ${field}`);
+                missingFiles.push(field);
+              } else if (file.truncated) {
+                console.error(`File too large: ${field} (${file.size} bytes)`);
+                invalidFiles.push(`${field} (file too large)`);
+              } else if (file.size === 0) {
+                console.error(`Empty file: ${field}`);
+                invalidFiles.push(`${field} (empty file)`);
+              } else {
+                console.log(`Valid file uploaded for ${field}`);
+              }
             }
-          }
 
-          if (missingFiles.length > 0 || invalidFiles.length > 0) {
-            console.error('File validation failed:', { missingFiles, invalidFiles });
-            
-            // Clean up uploaded files
-            await cleanupAllFiles(req.files);
-            
-            const errorMessages = [];
-            if (missingFiles.length) {
-              errorMessages.push(`Missing required files: ${missingFiles.join(', ')}`);
+            if (missingFiles.length > 0 || invalidFiles.length > 0) {
+              console.error('File validation failed:', { missingFiles, invalidFiles });
+              
+              // Clean up uploaded files
+              await cleanupAllFiles(req.files);
+              
+              const errorMessages = [];
+              if (missingFiles.length) {
+                errorMessages.push(`Missing required files: ${missingFiles.join(', ')}`);
+              }
+              if (invalidFiles.length) {
+                errorMessages.push(`Invalid files: ${invalidFiles.join(', ')}`);
+              }
+              
+              return res.status(400).json({
+                success: false,
+                message: errorMessages.join('; '),
+                details: { missingFiles, invalidFiles }
+              });
             }
-            if (invalidFiles.length) {
-              errorMessages.push(`Invalid files: ${invalidFiles.join(', ')}`);
-            }
-            
-            return res.status(400).json({
-              success: false,
-              message: errorMessages.join('; '),
-              details: { missingFiles, invalidFiles }
-            });
+          } else {
+            // For blog routes, just log the uploaded files
+            console.log('Blog upload - files:', Object.keys(req.files));
           }
         } else {
           console.log('No files were uploaded');

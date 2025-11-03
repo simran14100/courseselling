@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 // EdCare Design System Colors
 const ED_TEAL = "#07A698";
@@ -9,26 +9,52 @@ const TEXT_DARK = "#191A1F";
 const TEXT_GRAY = "#666";
 const BG = "#f8f9fa";
 
-export default function ConfirmationModal({ modalData }) {
+export default function ConfirmationModal({ modalData, modalOpen, setModalOpen }) {
   const [hoveredButton, setHoveredButton] = useState(null);
-
-  if (!modalData) return null;
+  
+  // Handle close on backdrop click
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      setModalOpen(false);
+    }
+  };
+  
+  // Handle close on Escape key
+  useEffect(() => {
+    if (!modalOpen || !modalData) return;
+    
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setModalOpen(false);
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [modalOpen, setModalOpen, modalData]);
+  
+  // Don't render anything if modal is not open or no modalData
+  if (!modalData || !modalOpen) return null;
   
   return (
-    <div style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      width: "100vw",
-      height: "100vh",
-      background: "rgba(0, 0, 0, 0.5)",
-      backdropFilter: "blur(4px)",
-      zIndex: 1000,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "20px"
-    }}>
+    <div 
+      onClick={handleBackdropClick}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        background: "rgba(0, 0, 0, 0.5)",
+        backdropFilter: "blur(4px)",
+        zIndex: 1000,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "20px"
+      }}>
       <div style={{
         background: "#fff",
         borderRadius: "16px",
@@ -90,7 +116,12 @@ export default function ConfirmationModal({ modalData }) {
         }}>
           {/* Primary Button (Logout) */}
           <button
-            onClick={modalData.btn1Handler}
+            onClick={() => {
+              if (modalData.btn1Handler) {
+                modalData.btn1Handler();
+              }
+              setModalOpen(false);
+            }}
             onMouseEnter={() => setHoveredButton('primary')}
             onMouseLeave={() => setHoveredButton(null)}
             style={{
@@ -118,7 +149,12 @@ export default function ConfirmationModal({ modalData }) {
 
           {/* Secondary Button (Cancel) */}
           <button
-            onClick={modalData.btn2Handler}
+            onClick={() => {
+              if (modalData.btn2Handler) {
+                modalData.btn2Handler();
+              }
+              setModalOpen(false);
+            }}
             onMouseEnter={() => setHoveredButton('secondary')}
             onMouseLeave={() => setHoveredButton(null)}
             style={{

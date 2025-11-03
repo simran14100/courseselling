@@ -359,6 +359,16 @@ const getSidebarLinks = (user, variant = 'default') => {
         ]
       },
       {
+        id: 13,
+        name: "News & Blog",
+        icon: <VscFileSubmodule style={{ fontSize: 20, color: ED_TEAL }} />,
+        subLinks: [
+          { name: "All Blog Posts", path: "/admin/blogs" },
+          { name: "Create New Post", path: "/admin/blogs/create" },
+          { name: "Categories", path: "/admin/blogs/categories" }
+        ]
+      },
+      {
         id: 5,
         name: "Course", 
         icon: <VscBook style={{ fontSize: 20, color: ED_TEAL }} />,
