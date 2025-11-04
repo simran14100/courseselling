@@ -21,30 +21,29 @@ const app = express();
 // Configure CORS
 const allowedOrigins = [
   'http://localhost:3000',
+  'https://www.crmwale.com',
+  'http://www.crmwale.com',
+  'https://crmwale.com',
+  'http://crmwale.com',
   'https://skill24.in',
+  'http://skill24.in',
   'https://www.skill24.in',
+  'http://www.skill24.in',
   'https://courseselling-2.onrender.com',
   'http://localhost:4000',
-  'https://localhost:4000',
-  'http://skill24.in',
-  'http://www.skill24.in'
+  'https://localhost:4000'
 ];
 
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    // In development or if origin checking is disabled, allow all origins
-    if (process.env.NODE_ENV !== 'production' || !origin) {
-      return callback(null, true);
-    }
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
     
-    // Check if origin is in allowedOrigins or is a subdomain of allowed origins
+    // Check if the origin is in the allowed list or is a subdomain of allowed domains
     const isAllowed = allowedOrigins.some(allowedOrigin => 
       origin === allowedOrigin || 
-      origin.startsWith(allowedOrigin.replace('https://', 'http://')) ||
-      origin.startsWith(allowedOrigin.replace('http://', 'https://')) ||
-      origin.endsWith('skill24.in') ||
-      origin.endsWith('courseselling-2.onrender.com')
+      origin.endsWith(new URL(allowedOrigin).hostname.replace('www.', ''))
     );
     
     if (isAllowed) {
@@ -55,7 +54,7 @@ const corsOptions = {
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type',
     'Authorization',
@@ -64,79 +63,53 @@ const corsOptions = {
     'Origin',
     'x-csrf-token',
     'x-access-token',
-    'X-Skip-Interceptor',
-    'withCredentials',
-    'Access-Control-Allow-Origin',
-    'Access-Control-Allow-Credentials',
-    'Access-Control-Allow-Headers',
-    'Access-Control-Request-Method'
+    'x-auth-token'
   ],
   exposedHeaders: [
     'Content-Range',
-    'X-Content-Range',
-    'Content-Length',
-    'Content-Type',
-    'set-cookie',
-    'Set-Cookie',
-    'Access-Control-Allow-Origin',
-    'Access-Control-Allow-Credentials'
+    'X-Total-Count'
   ],
-  optionsSuccessStatus: 204,
-  preflightContinue: false,
-  maxAge: 86400 // 24 hours
+  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 
-// Apply CORS middleware
+// Apply CORS with the above configuration to all routes
 app.use(cors(corsOptions));
 
-// Handle CORS headers for all requests
-app.use((req, res, next) => {
-  const origin = req.headers.origin || req.headers.Origin;
-  
-  // Always set Vary header
-  res.header('Vary', 'Origin');
-  
-  // Check if origin is allowed
-  const isAllowed = !origin || allowedOrigins.some(allowedOrigin => {
-    return (
-      origin === allowedOrigin ||
-      origin.startsWith(allowedOrigin.replace('https://', 'http://')) ||
-      origin.startsWith(allowedOrigin.replace('http://', 'https://')) ||
-      origin.endsWith('skill24.in') ||
-      origin.endsWith('courseselling-2.onrender.com')
-    );
-  });
-  
-  // Set CORS headers if origin is allowed or in development
-  if (isAllowed || process.env.NODE_ENV !== 'production') {
+// Handle preflight requests for all routes without using wildcard
+app.options(/.*/, (req, res) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin) || !origin) {
     res.header('Access-Control-Allow-Origin', origin || '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
-    res.header('Access-Control-Allow-Headers', [
-      'Content-Type',
-      'Authorization',
-      'X-Requested-With',
-      'Accept',
-      'Origin',
-      'x-csrf-token',
-      'x-access-token',
-      'X-Skip-Interceptor',
-      'withCredentials',
-      'Access-Control-Allow-Origin',
-      'Access-Control-Allow-Credentials',
-      'Access-Control-Allow-Headers',
-      'Access-Control-Request-Method'
-    ].join(', '));
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-csrf-token, x-access-token, x-auth-token');
     res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Max-Age', '86400'); // 24 hours
+    return res.status(200).end();
   }
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-  
-  next();
+  res.status(403).end();
 });
+
+const fs = require("fs");
+const os = require("os");
+
+// Security headers
+app.use(helmet());
+app.use(xss());
+app.use(hpp());
+app.use(morgan('dev'));
+
+// Body parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Apply rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.'
+});
+
+// Apply the rate limiter to all requests
+app.use(limiter);
 
 // Custom sanitization middleware to replace express-mongo-sanitize
 const sanitize = (req, res, next) => {
@@ -167,28 +140,11 @@ const sanitize = (req, res, next) => {
   
   next();
 };
-const fs = require("fs");
-const os = require("os");
 
 // CORS middleware is already configured at the top of the file
 
-// Security headers
-app.use(helmet());
-app.use(xss());
-app.use(hpp());
-app.use(morgan('dev'));
-
-// Body parsing middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Apply rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
-});
-app.use(limiter);
+// Security headers are already configured above
+// Remove duplicate middleware
 
 // Apply sanitization middleware
 app.use(sanitize);
