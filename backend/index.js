@@ -23,56 +23,118 @@ const allowedOrigins = [
   'http://localhost:3000',
   'https://skill24.in',
   'https://www.skill24.in',
-  'https://courseselling-2.onrender.com'
+  'https://courseselling-2.onrender.com',
+  'http://localhost:4000',
+  'https://localhost:4000',
+  'http://skill24.in',
+  'http://www.skill24.in'
 ];
 
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    // In development or if origin checking is disabled, allow all origins
+    if (process.env.NODE_ENV !== 'production' || !origin) {
+      return callback(null, true);
+    }
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Check if origin is in allowedOrigins or is a subdomain of allowed origins
+    const isAllowed = allowedOrigins.some(allowedOrigin => 
+      origin === allowedOrigin || 
+      origin.startsWith(allowedOrigin.replace('https://', 'http://')) ||
+      origin.startsWith(allowedOrigin.replace('http://', 'https://')) ||
+      origin.endsWith('skill24.in') ||
+      origin.endsWith('courseselling-2.onrender.com')
+    );
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
       console.log('Not allowed by CORS:', origin);
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error(`Not allowed by CORS: ${origin}`));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
   allowedHeaders: [
     'Content-Type',
     'Authorization',
     'X-Requested-With',
     'Accept',
+    'Origin',
     'x-csrf-token',
     'x-access-token',
     'X-Skip-Interceptor',
-    'withCredentials'
+    'withCredentials',
+    'Access-Control-Allow-Origin',
+    'Access-Control-Allow-Credentials',
+    'Access-Control-Allow-Headers',
+    'Access-Control-Request-Method'
   ],
   exposedHeaders: [
     'Content-Range',
     'X-Content-Range',
+    'Content-Length',
+    'Content-Type',
     'set-cookie',
-    'Set-Cookie'
+    'Set-Cookie',
+    'Access-Control-Allow-Origin',
+    'Access-Control-Allow-Credentials'
   ],
   optionsSuccessStatus: 204,
-  preflightContinue: false
+  preflightContinue: false,
+  maxAge: 86400 // 24 hours
 };
 
 // Apply CORS middleware
 app.use(cors(corsOptions));
 
-// Handle preflight requests for all routes
+// Handle CORS headers for all requests
 app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Origin', req.headers.origin);
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, x-csrf-token, x-access-token, X-Skip-Interceptor, withCredentials');
+  const origin = req.headers.origin || req.headers.Origin;
+  
+  // Always set Vary header
+  res.header('Vary', 'Origin');
+  
+  // Check if origin is allowed
+  const isAllowed = !origin || allowedOrigins.some(allowedOrigin => {
+    return (
+      origin === allowedOrigin ||
+      origin.startsWith(allowedOrigin.replace('https://', 'http://')) ||
+      origin.startsWith(allowedOrigin.replace('http://', 'https://')) ||
+      origin.endsWith('skill24.in') ||
+      origin.endsWith('courseselling-2.onrender.com')
+    );
+  });
+  
+  // Set CORS headers if origin is allowed or in development
+  if (isAllowed || process.env.NODE_ENV !== 'production') {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
+    res.header('Access-Control-Allow-Headers', [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+      'x-csrf-token',
+      'x-access-token',
+      'X-Skip-Interceptor',
+      'withCredentials',
+      'Access-Control-Allow-Origin',
+      'Access-Control-Allow-Credentials',
+      'Access-Control-Allow-Headers',
+      'Access-Control-Request-Method'
+    ].join(', '));
     res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400'); // 24 hours
+  }
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
+  
   next();
 });
 
