@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { auth, isInstructor, isAdmin, isSuperAdmin } = require('../middlewares/auth');
+const multer = require('multer');
+const { auth, isAdmin } = require('../middlewares/auth');
 const { 
     createBlog, 
     getAllBlogs, 
@@ -11,37 +12,56 @@ const {
     getAllBlogCategories
 } = require('../controllers/blogController');
 
+// Configure multer for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
+    },
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image files are allowed'), false);
+        }
+    }
+});
+
 // Blog routes
 router.post(
     '/',
     auth,
-    isInstructor,
+    isAdmin,
+    upload.single('image'),
     createBlog
 );
 
-// Keep the /create route for backward compatibility
+// Backward compatible route
 router.post(
     '/create',
     auth,
-    isInstructor,
+    isAdmin,
+    upload.single('image'),
     createBlog
 );
 
 router.get('/', getAllBlogs);
 router.get('/:id', getBlogById);
 
-// Protected routes (require authentication)
+// Protected routes (require admin authentication)
 router.put(
     '/:id',
     auth,
-    isInstructor,
+    isAdmin,
+    upload.single('image'),
     updateBlog
 );
 
 router.delete(
     '/:id',
     auth,
-    isInstructor,
+    isAdmin,
     deleteBlog
 );
 

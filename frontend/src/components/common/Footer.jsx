@@ -1,9 +1,12 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from "react-router-dom";
 import { toast } from 'react-hot-toast';
+import { fetchCourseCategories } from '../../services/operations/courseDetailsAPI';
 
 const Footer = () => {
   const [email, setEmail] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const location = useLocation();
 
   const handleSubscribe = (e) => {
@@ -23,6 +26,23 @@ const Footer = () => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    const getCategories = async () => {
+      setIsLoadingCategories(true);
+      try {
+        const categoriesData = await fetchCourseCategories();
+        setCategories(categoriesData);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+
+    getCategories();
+  }, []);
 
   // Check if we're in admin or instructor layout (has sidebar)
   const isAdminOrInstructorLayout = location.pathname.startsWith('/admin') || location.pathname.startsWith('/instructor');
@@ -60,7 +80,7 @@ const Footer = () => {
           </div>
           <div className="row footer-wrap">
             <div className="col-lg-3 col-md-6">
-              <div className="footer-widget">
+              {/* <div className="footer-widget">
                 <h3 className="widget-header">Get in touch!</h3>
                 <p className="mb-30">Fusce varius, dolor tempor interdum tristiquei bibendum.</p>
                 <div className="footer-contact">
@@ -76,17 +96,104 @@ const Footer = () => {
                   <li><a href="#"><i className="fab fa-behance"></i></a></li>
                   <li><a href="#"><i className="fab fa-youtube"></i></a></li>
                 </ul>
-              </div>
+              </div> */}
+              <div className="footer-widget">
+  <div className="footer-about">
+    <div className="footer-logo">
+      <h1 className="footer-logo-text" style={{ color: '#fff', fontSize: '24px', fontWeight: '700' }}>Office Address</h1>
+    </div>
+ <br/>
+    <div className="footer-contact" style={{ marginBottom: '20px' }}>
+      <div className="contact-item" style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+        <i className="fa-solid fa-phone" style={{ color: '#07A698', marginRight: '10px', fontSize: '18px' }}></i>
+        <a href="tel:7021231478" style={{ color: '#fff', textDecoration: 'none' }}>8684031003</a>
+      </div>
+      <div className="contact-item" style={{ display: 'flex', alignItems: 'center' }}>
+        <i className="fa-regular fa-envelope" style={{ color: '#07A698', marginRight: '10px', fontSize: '18px' }}></i>
+        <a href="mailto:info@company.com" style={{ color: '#fff', textDecoration: 'none' }}>info@company.com</a>
+      </div>
+     
+      <p style={{ color: '#fff', margin: '10px 0', lineHeight: '1.6' }}>
+      2nd Floor, 130 B Sewak Park<br />
+      Dwarka Mor Opp. Metro P.No- 783<br />
+      New Delhi (110059)
+    </p>
+    </div>
+    <ul className="footer-social" style={{ display: 'flex', gap: '15px', padding: 0, margin: '20px 0 0 0', listStyle: 'none' }}>
+      <li>
+        <a href="#" style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          width: '36px', 
+          height: '36px', 
+          borderRadius: '50%', 
+          backgroundColor: 'rgba(255,255,255,0.1)',
+          color: '#fff',
+          transition: 'all 0.3s ease'
+        }}>
+          <i className="fab fa-facebook-f"></i>
+        </a>
+      </li>
+      <li>
+        <a href="#" style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          width: '36px', 
+          height: '36px', 
+          borderRadius: '50%', 
+          backgroundColor: 'rgba(255,255,255,0.1)',
+          color: '#fff',
+          transition: 'all 0.3s ease'
+        }}>
+          <i className="fab fa-twitter"></i>
+        </a>
+      </li>
+      <li>
+        <a href="#" style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          width: '36px', 
+          height: '36px', 
+          borderRadius: '50%', 
+          backgroundColor: 'rgba(255,255,255,0.1)',
+          color: '#fff',
+          transition: 'all 0.3s ease'
+        }}>
+          <i className="fab fa-linkedin-in"></i>
+        </a>
+      </li>
+      <li>
+        <a href="#" style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          width: '36px', 
+          height: '36px', 
+          borderRadius: '50%', 
+          backgroundColor: 'rgba(255,255,255,0.1)',
+          color: '#fff',
+          transition: 'all 0.3s ease'
+        }}>
+          <i className="fab fa-instagram"></i>
+        </a>
+      </li>
+    </ul>
+  </div>
+</div>
             </div>
             <div className="col-lg-3 col-md-6">
               <div className="footer-widget widget-2">
                 <h3 className="widget-header">Company Info</h3>
                 <ul className="footer-list">
                   <li><Link to="/about">About Us</Link></li>
-                  <li><Link to="/service">Resource Center</Link></li>
-                  <li><Link to="/team">Careers</Link></li>
-                  <li><Link to="/contact">Instructor</Link></li>
-                  <li><Link to="/contact">Become A Teacher</Link></li>
+                  <li><Link to="/service">Privacy Policy</Link></li>
+                  <li><Link to="/">Terms and Condition</Link></li>
+                  <li><Link to="/">Refund and Policy</Link></li>
+                  <li><Link to="/">User License Agreement</Link></li>
+                  <li><Link to="/">Disclamer</Link></li>
                 </ul>
               </div>
             </div>
@@ -94,11 +201,23 @@ const Footer = () => {
               <div className="footer-widget widget-2">
                 <h3 className="widget-header">Useful Links</h3>
                 <ul className="footer-list">
-                  <li><Link to="/catalog">All Courses</Link></li>
-                  <li><Link to="/catalog">Digital Marketing</Link></li>
-                  <li><Link to="/catalog">Design & Branding</Link></li>
-                  <li><Link to="/catalog">Storytelling & Voice Over</Link></li>
-                  <li><Link to="/blog">News & Blogs</Link></li>
+                  {isLoadingCategories ? (
+                    <li>Loading categories...</li>
+                  ) : categories.length > 0 ? (
+                    categories.slice(0, 4).map((category) => (
+                      <li key={category._id}>
+                        <Link 
+                          to={`/category/${category._id}`}
+                          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        >
+                          {category.name}
+                        </Link>
+                      </li>
+                    ))
+                  ) : (
+                    <li>No categories available</li>
+                  )}
+                
                 </ul>
               </div>
             </div>

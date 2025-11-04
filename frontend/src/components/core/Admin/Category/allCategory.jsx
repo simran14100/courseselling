@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import DashboardLayout from "../../../common/DashboardLayout";
 import { apiConnector } from "../../../../services/apiConnector";
 import { categories as categoryEndpoints } from "../../../../services/apis";
+import { fetchCourseCategories } from "../../../../services/operations/courseDetailsAPI";
 import { toast } from "react-hot-toast";
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 
@@ -287,16 +288,25 @@ export default function AllCategories() {
     const fetchCategories = async () => {
       setLoading(true);
       try {
-        const result = await apiConnector("GET", categoryEndpoints.CATEGORIES_API);
-        if (result?.data?.data) {
-          setCategories(result.data.data);
+        console.log("Fetching categories...");
+        const categoriesData = await fetchCourseCategories();
+        console.log("Categories data received:", categoriesData);
+        
+        // Make sure categoriesData is an array before setting state
+        if (Array.isArray(categoriesData)) {
+          setCategories(categoriesData);
+        } else {
+          console.error("Expected categories data to be an array, got:", categoriesData);
+          setCategories([]);
         }
       } catch (error) {
+        console.error("Error fetching categories:", error);
         toast.error("Could not fetch categories");
-        console.error("FETCH_CATEGORIES_API ERROR............", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
+    
     fetchCategories();
   }, []);
 

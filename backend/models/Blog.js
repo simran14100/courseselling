@@ -27,8 +27,14 @@ const blogSchema = new mongoose.Schema({
         required: [true, 'Category is required']
     },
     image: {
-        type: String,
-        required: [true, 'Image is required']
+        public_id: {
+            type: String,
+            required: [true, 'Image public_id is required']
+        },
+        url: {
+            type: String,
+            required: [true, 'Image URL is required']
+        }
     },
     author: {
         type: mongoose.Schema.Types.ObjectId,

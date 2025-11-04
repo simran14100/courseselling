@@ -1,5 +1,6 @@
 import { apiConnector } from '../apiConnector';
 import { toast } from 'react-hot-toast';
+import axios from 'axios';
 
 // Define blog API endpoints
 const BLOG_API = {
@@ -33,26 +34,81 @@ export const fetchAllBlogs = async (searchQuery = '', page = 1, limit = 10) => {
   }
 };
 
-export const createBlog = async (data, token) => {
+/**
+ * Create a new blog post with image upload
+ * @param {FormData} formData - FormData containing blog post data and image file
+ * @param {string} token - Authentication token
+ * @returns {Promise<Object>} Created blog post data
+ */
+export const createBlog = async (formData, token) => {
   try {
-    const response = await apiConnector("POST", BLOG_API.CREATE_BLOG, data, {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'multipart/form-data',
-    });
+    console.log('Creating blog with form data');
     
-    if (!response.data.success) {
-      throw new Error(response.data.message);
+    // Log form data entries (except file content for readability)
+    for (let [key, value] of formData.entries()) {
+      if (key === 'image') {
+        console.log(`${key}: [File] ${value.name} (${value.size} bytes)`);
+      } else {
+        console.log(`${key}:`, value);
+      }
     }
-    
-    toast.success('Blog post created successfully');
+
+    // Create a new axios instance for file upload to avoid Content-Type header conflicts
+    const axiosInstance = axios.create({
+      baseURL: process.env.REACT_APP_BASE_URL || 'http://localhost:4000',
+      withCredentials: true,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // Let the browser set the Content-Type with the correct boundary
+      },
+      timeout: 30000, // 30 seconds
+    });
+
+    // Make the request with the custom axios instance
+    const response = await axiosInstance.post(
+      BLOG_API.CREATE_BLOG,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Failed to create blog post');
+    }
+
+    console.log('Blog created successfully:', response.data);
     return response.data;
   } catch (error) {
     console.error('CREATE_BLOG_API ERROR:', error);
-    toast.error(error.response?.data?.message || 'Failed to create blog post');
+    
+    // Handle specific error cases
+    if (error.response) {
+      console.error('Error response data:', error.response.data);
+      console.error('Error status:', error.response.status);
+      
+      if (error.response.status === 400) {
+        throw new Error(error.response.data.message || 'Invalid data provided');
+      } else if (error.response.status === 401) {
+        throw new Error('Session expired. Please log in again.');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to perform this action');
+      } else if (error.response.status === 413) {
+        throw new Error('File size is too large. Maximum size is 5MB.');
+      }
+    } else if (error.request) {
+      console.error('No response received:', error.request);
+      throw new Error('No response from server. Please check your connection.');
+    } else {
+      console.error('Error setting up request:', error.message);
+    }
+    
     throw error;
   }
 };
-
 
 export const fetchBlogById = async (id) => {
   try {

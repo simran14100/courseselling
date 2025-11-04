@@ -46,6 +46,7 @@ import AssignmentDetail from './pages/AssignmentDetail';
 import AdminNotifications from './pages/AdminNotifications';
 import Notifications from './pages/Notifications';
 import Blog from './pages/Admin/Blog';
+import BlogDetails from './pages/BlogDetails';
 
 
 
@@ -169,6 +170,9 @@ function AppRoutes() {
       {/* Alternate routes to keep legacy ViewCourse page accessible */}
       <Route path="/viewcourse/:courseId" element={<ViewCourse />} />
       <Route path="/viewcourse/:courseId/:sectionId/:subsectionId" element={<ViewCourse />} />
+      
+      {/* Blog Routes */}
+      <Route path="/blog/:blogId" element={<BlogDetails />} />
 
       {/* Dashboard Routes - Common for all authenticated users */}
       <Route path="/dashboard" element={

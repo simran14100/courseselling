@@ -7,16 +7,96 @@ import { useInView } from 'react-intersection-observer';
 import Footer from '../components/common/Footer';
 import DynamicFAQ from '../components/common/DynamicFAQ';
 import { toast } from 'react-hot-toast';
+import { apiConnector } from '../services/apiConnector';
+import { course } from '../services/apis';
+import { useParams } from 'react-router-dom';
+import { formatDate } from '../utils/formatDate';
+
+const GET_ALL_BLOGS_API = '/api/v1/blog';
+const GET_BLOG_BY_ID_API = '/api/v1/blog';
+
+const BlogDetailsView = ({ blog }) => {
+  if (!blog) return null;
+
+  const getImageUrl = (image) => {
+    if (!image) return 'https://via.placeholder.com/800x400?text=No+Image+Available';
+    
+    if (typeof image === 'string') {
+      return image.startsWith('http') ? image : `${process.env.REACT_APP_BASE_URL || 'http://localhost:4000'}${image}`;
+    } 
+    
+    if (image?.url) {
+      return image.url.startsWith('http') ? image.url : `${process.env.REACT_APP_BASE_URL || 'http://localhost:4000'}${image.url}`;
+    }
+    
+    return 'https://via.placeholder.com/800x400?text=No+Image+Available';
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <article className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="h-96 overflow-hidden">
+            <img
+              src={getImageUrl(blog.image)}
+              alt={blog.title}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = 'https://via.placeholder.com/800x400?text=Image+Not+Available';
+              }}
+            />
+          </div>
+          
+          <div className="p-6 md:p-8">
+            <div className="flex items-center text-sm text-gray-500 mb-4">
+              <span className="mr-4">
+                <i className="far fa-calendar-alt mr-1"></i> {formatDate(blog.createdAt)}
+              </span>
+              {blog.category && (
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                  {blog.category.name || 'Uncategorized'}
+                </span>
+              )}
+            </div>
+            
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">{blog.title}</h1>
+            
+            <div 
+              className="prose max-w-none text-gray-700 mb-8"
+              dangerouslySetInnerHTML={{ __html: blog.content }}
+            />
+            
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <Link 
+                to="/" 
+                className="inline-flex items-center text-blue-600 hover:text-blue-800"
+              >
+                <i className="fas fa-arrow-left mr-2"></i>
+                Back to home
+              </Link>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  );
+};
 
 const Home = () => {
+  const { blogId } = useParams();
+  const [showBlogDetails, setShowBlogDetails] = useState(false);
+  const [currentBlog, setCurrentBlog] = useState(null);
   const [trendingCourses, setTrendingCourses] = useState([]);
   const [topClassCourses, setTopClassCourses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [instructors, setInstructors] = useState([]);
+  const [blogs, setBlogs] = useState([]);
   const [isLoadingTrending, setIsLoadingTrending] = useState(true);
   const [isLoadingTopClass, setIsLoadingTopClass] = useState(true);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isLoadingInstructors, setIsLoadingInstructors] = useState(true);
+  const [isLoadingBlogs, setIsLoadingBlogs] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -90,6 +170,114 @@ const Home = () => {
     fetchAllCourses();
   }, []);
 
+  // Fetch a single blog by ID
+  const fetchBlogById = async (id) => {
+    try {
+      setIsLoadingBlogs(true);
+      const response = await apiConnector('GET', `${GET_BLOG_BY_ID_API}/${id}`);
+      
+      if (response?.data?.success) {
+        setCurrentBlog(response.data.data);
+        setShowBlogDetails(true);
+      } else {
+        throw new Error(response?.data?.message || 'Failed to fetch blog');
+      }
+    } catch (error) {
+      console.error('Error fetching blog:', error);
+      toast.error('Failed to load blog post');
+      navigate('/');
+    } finally {
+      setIsLoadingBlogs(false);
+    }
+  };
+
+  // Fetch all blogs
+  const fetchBlogs = async () => {
+    console.log('Starting to fetch blogs from:', GET_ALL_BLOGS_API);
+    try {
+      setIsLoadingBlogs(true);
+      console.log('Making API request to fetch blogs...');
+      const response = await apiConnector('GET', GET_ALL_BLOGS_API);
+      console.log('Blogs API Response:', response);
+
+      if (!response) {
+        console.error('No response received from the blogs API');
+        throw new Error('No response received from the server');
+      }
+
+      if (response?.data?.success) {
+        console.log('Blogs fetched successfully:', response.data.data);
+        const blogsData = response.data.data || [];
+        setBlogs(blogsData);
+        
+        // If we have a blogId in the URL, find and show that blog
+        if (blogId) {
+          const blog = blogsData.find(b => b._id === blogId || b.slug === blogId);
+          if (blog) {
+            setCurrentBlog(blog);
+            setShowBlogDetails(true);
+          } else {
+            // If blog not found in the list, try to fetch it directly
+            fetchBlogById(blogId);
+          }
+        }
+      } else {
+        const errorMsg = response?.data?.message || 'Failed to fetch blogs';
+        console.error('Blogs API Error:', errorMsg);
+        console.error('Full error response:', response);
+        throw new Error(errorMsg);
+      }
+    } catch (error) {
+      console.error('Error in fetchBlogs:', {
+        message: error.message,
+        stack: error.stack,
+        response: error.response?.data
+      });
+      toast.error(error.message || 'Failed to load blogs');
+      setBlogs([]);
+    } finally {
+      console.log('Finished fetching blogs');
+      setIsLoadingBlogs(false);
+    }
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    console.log('Home component mounted, starting data fetch...');
+    const fetchData = async () => {
+      try {
+        // Fetch categories
+        console.log('Fetching categories...');
+        const categoriesData = await fetchCourseCategories();
+        console.log('Categories data:', categoriesData);
+        setCategories(categoriesData || []);
+        
+        // Fetch instructors
+        console.log('Fetching all data: instructors...');
+        const instructorsData = await getAllInstructors();
+        console.log('All data - Instructors:', instructorsData);
+        setInstructors(Array.isArray(instructorsData) ? instructorsData : []);
+
+        // Fetch blogs
+        console.log('Fetching blogs...');
+        await fetchBlogs();
+      } catch (error) {
+        console.error('Error in fetchData:', {
+          message: error.message,
+          stack: error.stack,
+          response: error.response?.data
+        });
+        toast.error('Failed to load data. Please try again later.');
+      } finally {
+        console.log('Finished all data fetching');
+        setIsLoadingCategories(false);
+        setIsLoadingInstructors(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   // Fetch categories on component mount
   useEffect(() => {
     const fetchCategories = async () => {
@@ -121,10 +309,13 @@ const Home = () => {
     const fetchInstructors = async () => {
       try {
         console.log("Fetching instructors...");
-        const instructorsData = await getAllInstructors();
-        console.log("Instructors fetched:", instructorsData);
-        setInstructors(instructorsData || []);
+        const response = await getAllInstructors();
+        console.log("Instructors API response:", response);
+        // The response is already the data we need (response.data.data from apiConnector)
+        setInstructors(Array.isArray(response) ? response : []);
       } catch (error) {
+        console.error("Error fetching instructors:", error);
+        setInstructors([]);
         console.error("Error fetching instructors:", error);
         setInstructors([]);
       } finally {
@@ -132,7 +323,14 @@ const Home = () => {
       }
     };
 
+    // Fetch instructors when component mounts
     fetchInstructors();
+    
+    // Set up interval to refresh instructors every 5 minutes
+    const refreshInterval = setInterval(fetchInstructors, 5 * 60 * 1000);
+    
+    // Clean up interval on component unmount
+    return () => clearInterval(refreshInterval);
   }, []);
 
   // Helper function to format duration
@@ -144,6 +342,26 @@ const Home = () => {
       return `${hours}.${Math.round(minutes / 60 * 10)} Hours`;
     }
     return `${minutes} Minutes`;
+  };
+
+  // Helper function to format date
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', options);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'N/A';
+    }
+  };
+
+  // Truncate text to a certain length
+  const truncateText = (text, maxLength = 200) => {
+    if (!text) return '';
+    if (typeof text !== 'string') return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
   };
 
   // Helper function to get course thumbnail
@@ -2126,245 +2344,194 @@ const Home = () => {
               Latest News Updates
             </h2>
           </div>
-          <div className="row gy-lg-0 gy-4 justify-content-center post-card-2-wrap">
-            <div className="col-lg-12 col-md-6">
-              <div className="post-card-2 wow fade-in-bottom" data-wow-delay="200ms">
-                <div className="post-thumb">
-                  <img src="/assets/img/blog/post-4.png" alt="post" />
-                </div>
-                <div className="post-content-wrap">
-                  <div className="post-content">
-                    <ul className="post-meta">
-                      <li>
-                        <i className="fa-sharp fa-regular fa-clock"></i>August 15, 2025
-                      </li>
-                      <li>
-                        <i className="fa-sharp fa-regular fa-folder"></i>Marketing
-                      </li>
-                    </ul>
-                    <h3 className="title">
-                      <a href="/blog-details" style={{
-                        color: '#191A1F',
-                        textDecoration: 'none',
-                        fontSize: '24px',
-                        fontWeight: '600',
-                        lineHeight: '1.3',
-                        transition: 'all 0.3s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.color = '#07A698';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.color = '#191A1F';
-                      }}>
-                        Repurpose mission critical action life items rather total
-                      </a>
-                    </h3>
-                    <p>
-                      we understand the importance of preparing students for the real world curriculum is <br /> designed strong emphasis on practical skills and real-world applications. By integrating <br /> project-based learning, internships, and industry partnerships,
-                    </p>
-                    <a href="/blog-details" style={{
-                      backgroundColor: '#ffffff',
-                      color: '#07A698',
-                      fontSize: '15px',
-                      fontWeight: '600',
-                      padding: '14px 32px',
-                      borderRadius: '50px',
-                      textDecoration: 'none',
-                      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      zIndex: 1,
-                      border: '2px solid #f0f0f0',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-                      letterSpacing: '0.3px',
-                      textTransform: 'uppercase',
-                      fontFamily: 'SF Pro Display, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = '#07A698';
-                      e.target.style.color = '#ffffff';
-                      e.target.style.transform = 'translateY(-3px) scale(1.02)';
-                      e.target.style.boxShadow = '0 8px 25px rgba(7, 166, 152, 0.25)';
-                      e.target.style.borderColor = '#07A698';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = '#ffffff';
-                      e.target.style.color = '#07A698';
-                      e.target.style.transform = 'translateY(0) scale(1)';
-                      e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
-                      e.target.style.borderColor = '#f0f0f0';
-                    }}>
-                      Read More <i className="fa-solid fa-arrow-right" style={{ fontSize: '12px', transition: 'transform 0.3s ease' }}></i>
-                    </a>
+          
+          {isLoadingBlogs ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              <p className="mt-2">Loading blogs...</p>
+            </div>
+          ) : blogs.length > 0 ? (
+            <div className="row gy-lg-0 gy-4 justify-content-center post-card-2-wrap">
+              {blogs.slice(0, 3).map((blog, index) => (
+                <div className="col-lg-12 col-md-6" key={blog._id || index}>
+                  <div 
+                    className="post-card-2 wow fade-in-bottom" 
+                    data-wow-delay={`${(index + 2) * 100}ms`}
+                  >
+                    <div className="post-thumb">
+                      <img 
+                        src={
+                          (() => {
+                            // Handle case where image is a string
+                            if (typeof blog.image === 'string') {
+                              if (blog.image.startsWith('http')) {
+                                return blog.image;
+                              }
+                              return `${process.env.REACT_APP_BASE_URL || 'http://localhost:4000'}${blog.image}`;
+                            } 
+                            // Handle case where image is an object with url property
+                            else if (blog.image && typeof blog.image === 'object' && blog.image.url) {
+                              if (typeof blog.image.url === 'string') {
+                                if (blog.image.url.startsWith('http')) {
+                                  return blog.image.url;
+                                }
+                                return `${process.env.REACT_APP_BASE_URL || 'http://localhost:4000'}${blog.image.url}`;
+                              }
+                            }
+                            // Fallback to placeholder
+                            return 'https://via.placeholder.com/400x250?text=No+Image+Available';
+                          })()
+                        } 
+                        alt={blog.title || 'Blog post image'} 
+                        style={{ width: '100%', height: '250px', objectFit: 'cover' }}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://via.placeholder.com/400x250?text=Image+Not+Available';
+                        }}
+                        className="blog-image"
+                      />
+                    </div>
+                    <div className="post-content-wrap">
+                      <div className="post-content">
+                        <ul className="post-meta">
+                          <li>
+                            <i className="fa-sharp fa-regular fa-clock"></i>
+                            {blog.createdAt ? formatDate(blog.createdAt) : 'N/A'}
+                          </li>
+                          <li>
+                            <i className="fa-sharp fa-regular fa-folder"></i>
+                            {blog.category?.name || 'Uncategorized'}
+                          </li>
+                        </ul>
+                        <h3 className="title">
+                          <Link 
+                            to={`/blog/${blog.slug || blog._id}`}
+                            style={{
+                              color: '#191A1F',
+                              textDecoration: 'none',
+                              fontSize: '24px',
+                              fontWeight: '600',
+                              lineHeight: '1.3',
+                              transition: 'all 0.3s ease',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              minHeight: '60px'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.color = '#07A698';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.color = '#191A1F';
+                            }}
+                          >
+                            {blog.title}
+                          </Link>
+                        </h3>
+                        <p style={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          minHeight: '72px',
+                          marginBottom: '20px'
+                        }}>
+                          {truncateText(blog.excerpt || blog.content || '', 200)}
+                        </p>
+                        <Link 
+                          to={`/blog/${blog.slug || blog._id}`}
+                          style={{
+                            backgroundColor: '#ffffff',
+                            color: '#07A698',
+                            fontSize: '15px',
+                            fontWeight: '600',
+                            padding: '14px 32px',
+                            borderRadius: '50px',
+                            textDecoration: 'none',
+                            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            zIndex: 1,
+                            border: '2px solid #f0f0f0',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+                            letterSpacing: '0.3px',
+                            textTransform: 'uppercase',
+                            fontFamily: 'SF Pro Display, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.backgroundColor = '#07A698';
+                            e.target.style.color = '#ffffff';
+                            e.target.style.transform = 'translateY(-3px) scale(1.02)';
+                            e.target.style.boxShadow = '0 8px 25px rgba(7, 166, 152, 0.25)';
+                            e.target.style.borderColor = '#07A698';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.backgroundColor = '#ffffff';
+                            e.target.style.color = '#07A698';
+                            e.target.style.transform = 'translateY(0) scale(1)';
+                            e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
+                            e.target.style.borderColor = '#f0f0f0';
+                          }}
+                        >
+                          Read More <i className="fa-solid fa-arrow-right" style={{ fontSize: '12px', transition: 'transform 0.3s ease' }}></i>
+                        </Link>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
-            <div className="col-lg-12 col-md-6">
-              <div className="post-card-2 wow fade-in-bottom" data-wow-delay="400ms">
-                <div className="post-thumb">
-                  <img src="/assets/img/blog/post-5.png" alt="post" />
-                </div>
-                <div className="post-content-wrap">
-                  <div className="post-content">
-                    <ul className="post-meta">
-                      <li>
-                        <i className="fa-sharp fa-regular fa-clock"></i>August 15, 2025
-                      </li>
-                      <li>
-                        <i className="fa-sharp fa-regular fa-folder"></i>Marketing
-                      </li>
-                    </ul>
-                    <h3 className="title">
-                      <a href="/blog-details" style={{
-                        color: '#191A1F',
-                        textDecoration: 'none',
-                        fontSize: '24px',
-                        fontWeight: '600',
-                        lineHeight: '1.3',
-                        transition: 'all 0.3s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.color = '#07A698';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.color = '#191A1F';
-                      }}>
-                        Transforming Traditional Classrooms for 21st-Century Learners
-                      </a>
-                    </h3>
-                    <p>
-                      we understand the importance of preparing students for the real world curriculum is <br /> designed strong emphasis on practical skills and real-world applications. By integrating <br /> project-based learning, internships, and industry partnerships,
-                    </p>
-                    <a href="/blog-details" style={{
-                      backgroundColor: '#ffffff',
-                      color: '#07A698',
-                      fontSize: '15px',
-                      fontWeight: '600',
-                      padding: '14px 32px',
-                      borderRadius: '50px',
-                      textDecoration: 'none',
-                      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      zIndex: 1,
-                      border: '2px solid #f0f0f0',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-                      letterSpacing: '0.3px',
-                      textTransform: 'uppercase',
-                      fontFamily: 'SF Pro Display, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = '#07A698';
-                      e.target.style.color = '#ffffff';
-                      e.target.style.transform = 'translateY(-3px) scale(1.02)';
-                      e.target.style.boxShadow = '0 8px 25px rgba(7, 166, 152, 0.25)';
-                      e.target.style.borderColor = '#07A698';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = '#ffffff';
-                      e.target.style.color = '#07A698';
-                      e.target.style.transform = 'translateY(0) scale(1)';
-                      e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
-                      e.target.style.borderColor = '#f0f0f0';
-                    }}>
-                      Read More <i className="fa-solid fa-arrow-right" style={{ fontSize: '12px', transition: 'transform 0.3s ease' }}></i>
-                    </a>
-                  </div>
-                </div>
-              </div>
+          ) : (
+            <div className="text-center py-5">
+              <p>No blogs found. Check back later for updates!</p>
             </div>
-            <div className="col-lg-12 col-md-6">
-              <div className="post-card-2 wow fade-in-bottom" data-wow-delay="500ms">
-                <div className="post-thumb">
-                  <img src="/assets/img/blog/post-6.png" alt="post" />
-                </div>
-                <div className="post-content-wrap">
-                  <div className="post-content">
-                    <ul className="post-meta">
-                      <li>
-                        <i className="fa-sharp fa-regular fa-clock"></i>August 15, 2025
-                      </li>
-                      <li>
-                        <i className="fa-sharp fa-regular fa-folder"></i>Marketing
-                      </li>
-                    </ul>
-                    <h3 className="title">
-                      <a href="/blog-details" style={{
-                        color: '#191A1F',
-                        textDecoration: 'none',
-                        fontSize: '24px',
-                        fontWeight: '600',
-                        lineHeight: '1.3',
-                        transition: 'all 0.3s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.color = '#07A698';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.color = '#191A1F';
-                      }}>
-                        The Role of Social-Emotional Learning in Building Resilient
-                      </a>
-                    </h3>
-                    <p>
-                      we understand the importance of preparing students for the real world curriculum is <br /> designed strong emphasis on practical skills and real-world applications. By integrating <br /> project-based learning, internships, and industry partnerships,
-                    </p>
-                    <a href="/blog-details" style={{
-                      backgroundColor: '#ffffff',
-                      color: '#07A698',
-                      fontSize: '15px',
-                      fontWeight: '600',
-                      padding: '14px 32px',
-                      borderRadius: '50px',
-                      textDecoration: 'none',
-                      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      zIndex: 1,
-                      border: '2px solid #f0f0f0',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-                      letterSpacing: '0.3px',
-                      textTransform: 'uppercase',
-                      fontFamily: 'SF Pro Display, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = '#07A698';
-                      e.target.style.color = '#ffffff';
-                      e.target.style.transform = 'translateY(-3px) scale(1.02)';
-                      e.target.style.boxShadow = '0 8px 25px rgba(7, 166, 152, 0.25)';
-                      e.target.style.borderColor = '#07A698';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = '#ffffff';
-                      e.target.style.color = '#07A698';
-                      e.target.style.transform = 'translateY(0) scale(1)';
-                      e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
-                      e.target.style.borderColor = '#f0f0f0';
-                    }}>
-                      Read More <i className="fa-solid fa-arrow-right" style={{ fontSize: '12px', transition: 'transform 0.3s ease' }}></i>
-                    </a>
-                  </div>
-                </div>
-              </div>
+          )}
+          
+          {/* View All Blogs Button */}
+          {blogs.length > 3 && (
+            <div className="text-center mt-5">
+              <Link 
+                to="/blog" 
+                className="btn btn-primary"
+                style={{
+                  backgroundColor: '#07A698',
+                  color: '#fff',
+                  padding: '12px 40px',
+                  borderRadius: '50px',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  transition: 'all 0.3s ease',
+                  textDecoration: 'none',
+                  display: 'inline-block',
+                  border: '2px solid #07A698'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#fff';
+                  e.target.style.color = '#07A698';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#07A698';
+                  e.target.style.color = '#fff';
+                }}
+              >
+                View All Blogs
+              </Link>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
+     
      
 
       <Footer />

@@ -7,81 +7,91 @@ const { uploadImageToCloudinary } = require('../utils/imageUploader');
 // Create a new blog post
 exports.createBlog = async (req, res) => {
     try {
-        const {
-            title,
-            excerpt, 
-            content, 
-            category, 
-            tags, 
-            status, 
-            featured, 
-            metaTitle, 
-            metaDescription
-        } = req.body;
+        console.log('Request body:', req.body);
+        console.log('Uploaded file:', req.file);
         
-        const userId = req.user.id;
-        
-        // Handle file upload
-        let imageUrl = '';
-        if (req.files && req.files.image) {
-            const imageFile = req.files.image;
-            console.log('Image file received:', {
-                name: imageFile.name,
-                size: imageFile.size,
-                mimetype: imageFile.mimetype,
-                tempFilePath: imageFile.tempFilePath
-            });
-
-            try {
-                // Read the file data
-                const fileContent = fs.readFileSync(imageFile.tempFilePath);
-                
-                // Upload to Cloudinary
-                const uploadResult = await uploadImageToCloudinary(
-                    fileContent,
-                    'blog-images',
-                    800,
-                    80
-                );
-                
-                imageUrl = uploadResult.secure_url;
-                console.log('Image uploaded to Cloudinary:', imageUrl);
-                
-                // Clean up the temp file
-                fs.unlinkSync(imageFile.tempFilePath);
-                
-            } catch (uploadError) {
-                console.error('Error uploading to Cloudinary:', uploadError);
-                
-                // Clean up the temp file if it exists
-                if (imageFile.tempFilePath && fs.existsSync(imageFile.tempFilePath)) {
-                    fs.unlinkSync(imageFile.tempFilePath);
+        // Helper function to parse stringified fields
+        const parseIfString = (value) => {
+            if (!value) return value;
+            if (typeof value === 'string') {
+                try {
+                    return JSON.parse(value);
+                } catch (e) {
+                    return value;
                 }
-                
-                return res.status(500).json({
-                    success: false,
-                    message: 'Failed to upload image',
-                    error: uploadError.message
-                });
             }
-        } else {
+            return value;
+        };
+
+        // Parse form data
+        const formData = {
+            title: req.body.title,
+            excerpt: req.body.excerpt,
+            content: req.body.content,
+            category: req.body.category,
+            tags: parseIfString(req.body.tags) || [],
+            status: req.body.status || 'draft',
+            featured: req.body.featured === 'true' || req.body.featured === true,
+            metaTitle: req.body.metaTitle || '',
+            metaDescription: req.body.metaDescription || ''
+        };
+
+        const { title, content } = formData;
+        
+        // Validate required fields
+        if (!title || !content) {
             return res.status(400).json({
                 success: false,
-                message: 'Image is required',
-                files: req.files
+                message: 'Title and content are required fields',
+                receivedData: formData // For debugging
+            });
+        }
+        
+        // Check if image is uploaded
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'Image is required for blog posts'
             });
         }
 
-        // Parse tags if they're sent as a string
-        let tagsArray = [];
-        if (typeof tags === 'string') {
-            try {
-                tagsArray = JSON.parse(tags);
-            } catch (e) {
-                tagsArray = tags.split(',').map(tag => tag.trim());
+        console.log('Processing uploaded file:', {
+            originalname: req.file.originalname,
+            size: req.file.size,
+            mimetype: req.file.mimetype
+        });
+
+        let imageUrl;
+        try {
+            // Convert buffer to base64 for Cloudinary
+            const base64Data = req.file.buffer.toString('base64');
+            const dataUri = `data:${req.file.mimetype};base64,${base64Data}`;
+            
+            // Upload to Cloudinary with a folder and transformations
+            const uploadResult = await uploadImageToCloudinary(
+                dataUri,
+                'blog-images',
+                800,
+                80
+            );
+            
+            if (!uploadResult || !uploadResult.secure_url) {
+                throw new Error('Failed to upload image to Cloudinary');
             }
-        } else if (Array.isArray(tags)) {
-            tagsArray = tags;
+            
+            imageUrl = {
+                public_id: uploadResult.public_id,
+                url: uploadResult.secure_url
+            };
+            
+            console.log('Image uploaded to Cloudinary:', imageUrl);
+        } catch (error) {
+            console.error('Error uploading image to Cloudinary:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Error uploading image to Cloudinary',
+                error: error.message
+            });
         }
 
         // Generate a URL-friendly slug from the title
@@ -90,21 +100,34 @@ exports.createBlog = async (req, res) => {
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/(^-|-$)/g, '');
 
-        // Create blog post
+        // Ensure we have a valid author ID
+        const authorId = req.user?.id || req.user?._id;
+        if (!authorId) {
+            return res.status(400).json({
+                success: false,
+                message: 'User not authenticated or invalid user ID'
+            });
+        }
+
+        // Create blog post data with proper defaults
         const blogData = {
-            title,
+            title: formData.title,
+            content: formData.content,
+            excerpt: formData.excerpt || formData.content.substring(0, 200) + '...',
+            category: formData.category || null,
+            tags: Array.isArray(formData.tags) ? formData.tags : 
+                 (formData.tags ? [formData.tags] : []),
+            status: formData.status || 'draft',
+            featured: formData.featured || false,
             slug,
-            excerpt,
-            content,
-            category,
             image: imageUrl,
-            author: new mongoose.Types.ObjectId(userId),
-            status: status || 'draft',
-            featured: featured === 'true' || featured === true,
-            tags: tagsArray,
-            metaTitle: metaTitle || title,
-            metaDescription: metaDescription || excerpt
+            author: authorId,  // Use the properly extracted author ID
+            metaTitle: formData.metaTitle || formData.title,
+            metaDescription: formData.metaDescription || formData.excerpt || ''
         };
+        
+        console.log('Processed blog data:', JSON.stringify(blogData, null, 2));
+        console.log('Author ID:', authorId);
 
         console.log('Creating blog post with data:', JSON.stringify(blogData, null, 2));
         

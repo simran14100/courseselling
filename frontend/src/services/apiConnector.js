@@ -422,7 +422,10 @@ export const apiConnector = async (method, url, bodyData = null, headers = {}, p
       // Check if we need to use FormData (for file uploads)
       if (bodyData instanceof FormData) {
         // For FormData, let the browser set the Content-Type with boundary
-        requestConfig.headers['Content-Type'] = 'multipart/form-data';
+        // Remove any existing Content-Type header to let the browser set it with the correct boundary
+        if (requestConfig.headers['Content-Type']) {
+          delete requestConfig.headers['Content-Type'];
+        }
         requestConfig.data = bodyData;
         
         // Log FormData contents for debugging

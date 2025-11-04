@@ -29,8 +29,13 @@ export default function AllCourses() {
       try {
         const baseCfg = {
           withCredentials: true,
-          'X-Skip-Interceptor': 'true',
-          headers: { Authorization: token ? `Bearer ${token}` : undefined },
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : undefined,
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-Skip-Interceptor': 'true'
+          }
         };
 
         let list = [];

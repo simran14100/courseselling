@@ -152,8 +152,12 @@ export default function BlogList() {
                         <div className="flex-shrink-0 h-10 w-10">
                           <img 
                             className="h-10 w-10 rounded-md object-cover" 
-                            src={blog.image} 
+                            src={blog.image?.url || ''} 
                             alt={blog.title} 
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = 'https://via.placeholder.com/40';
+                            }}
                           />
                         </div>
                         <div className="ml-4">

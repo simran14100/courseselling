@@ -5,6 +5,7 @@ console.log('Loading .env from:', path.resolve(__dirname, '.env'));
 console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID);
 console.log('RAZORPAY_KEY_SECRET:', process.env.RAZORPAY_KEY_SECRET ? 'SET' : 'NOT SET');
 console.log('MONGODB_URL:', process.env.MONGODB_URL);
+
 const express = require("express");
 const cors = require("cors");
 const { cloudinaryConnect } = require("./config/cloudinary");
@@ -13,6 +14,58 @@ const helmet = require('helmet');
 const { xss } = require('express-xss-sanitizer');
 const hpp = require('hpp');
 const morgan = require('morgan');
+
+// Initialize express app
+const app = express();
+
+// Configure CORS
+const allowedOrigins = ['http://localhost:3000', 'https://courseselling-2.onrender.com'];
+
+// CORS configuration
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'x-csrf-token',
+    'x-access-token',
+    'X-Skip-Interceptor',
+    'withCredentials'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  exposedHeaders: [
+    'Content-Range',
+    'X-Content-Range',
+    'set-cookie',
+    'Set-Cookie'
+  ],
+  optionsSuccessStatus: 204,
+  preflightContinue: false
+};
+
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// Handle preflight requests for all routes
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, x-csrf-token, x-access-token, X-Skip-Interceptor, withCredentials');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    return res.status(204).end();
+  }
+  next();
+});
 
 // Custom sanitization middleware to replace express-mongo-sanitize
 const sanitize = (req, res, next) => {
@@ -46,30 +99,28 @@ const sanitize = (req, res, next) => {
 const fs = require("fs");
 const os = require("os");
 
+// CORS middleware is already configured at the top of the file
 
-const app = express();
+// Security headers
+app.use(helmet());
+app.use(xss());
+app.use(hpp());
+app.use(morgan('dev'));
 
-// CORS configuration - more permissive for development
-app.use((req, res, next) => {
-  // Allow all origins in development
-  res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
-  
-  // Allow credentials
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  // Allow all headers that might be sent
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-csrf-token, x-access-token, Cache-Control, Pragma, headers');
-  
-  // Allow all methods
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
-  next();
+// Body parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Apply rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.'
 });
+app.use(limiter);
+
+// Apply sanitization middleware
+app.use(sanitize);
 
 const userRoutes = require("./routes/user");
 const profileRoutes = require("./routes/profile");
@@ -115,15 +166,6 @@ cloudinary.config({
 });
 
 global.cloudinary = cloudinary;
-
-
-
-
-
-
-// Middlewares
-app.use(express.json());
-app.use(cookieParser());
 
 // Body parsing middleware (for non-multipart requests)
 app.use(express.json({ limit: '50mb' }));

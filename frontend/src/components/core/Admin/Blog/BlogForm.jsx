@@ -222,13 +222,32 @@ export default function BlogForm({ isEditMode = false }) {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please upload a valid image file (JPEG, PNG, etc.)');
+        e.target.value = ''; // Clear the file input
+        return;
+      }
+      
+      // Validate file size (5MB max)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        toast.error('Image size should be less than 5MB');
+        e.target.value = ''; // Clear the file input
+        return;
+      }
+      
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({
           ...prev,
-          image: file,
-          imagePreview: reader.result
+          image: file, // Store the actual file object
+          imagePreview: reader.result // Store the preview URL
         }));
+      };
+      reader.onerror = () => {
+        toast.error('Error reading the image file');
+        e.target.value = ''; // Clear the file input
       };
       reader.readAsDataURL(file);
     }
@@ -262,24 +281,44 @@ export default function BlogForm({ isEditMode = false }) {
     
     try {
       setIsLoading(true);
+      
+      // Create FormData and append all fields
       const formDataToSend = new FormData();
       
-      // Append all form data
-      formDataToSend.append('title', formData.title);
-      formDataToSend.append('excerpt', formData.excerpt);
-      formDataToSend.append('content', formData.content);
-      formDataToSend.append('category', formData.category);
-      formDataToSend.append('status', formData.status);
-      formDataToSend.append('featured', formData.featured);
-      formDataToSend.append('metaTitle', formData.metaTitle);
-      formDataToSend.append('metaDescription', formData.metaDescription);
+      // Required fields
+      formDataToSend.append('title', formData.title || '');
+      formDataToSend.append('content', formData.content || '');
       
-      // Append tags as JSON string
-      formDataToSend.append('tags', JSON.stringify(formData.tags));
+      // Optional fields with fallbacks
+      formDataToSend.append('excerpt', formData.excerpt || '');
+      formDataToSend.append('category', formData.category || '');
+      formDataToSend.append('status', formData.status || 'draft');
+      formDataToSend.append('featured', formData.featured || false);
+      formDataToSend.append('metaTitle', formData.metaTitle || formData.title || '');
+      formDataToSend.append('metaDescription', formData.metaDescription || formData.excerpt || '');
       
-      // Append image if it exists
-      if (formData.image) {
-        formDataToSend.append('image', formData.image);
+      // Handle tags - ensure it's an array
+      const tagsArray = Array.isArray(formData.tags) ? formData.tags : [];
+      formDataToSend.append('tags', JSON.stringify(tagsArray));
+      
+      // Handle image file - this is required
+      if (!formData.image) {
+        toast.error('Please select an image for the blog post');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Append the image file
+      formDataToSend.append('image', formData.image);
+      
+      // Log form data (excluding file content for readability)
+      console.log('Form data prepared for submission:');
+      for (let [key, value] of formDataToSend.entries()) {
+        if (key === 'image') {
+          console.log(`${key}:`, value.name, `(${value.size} bytes, ${value.type})`);
+        } else {
+          console.log(`${key}:`, value);
+        }
       }
 
       if (isEditMode) {
@@ -370,7 +409,11 @@ export default function BlogForm({ isEditMode = false }) {
         {isEditMode ? 'Edit Blog Post' : 'Create New Blog Post'}
       </h2>
       
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <form 
+        onSubmit={handleSubmit} 
+        style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
+        encType="multipart/form-data"
+      >
         {/* Title */}
         <div>
           <label 
@@ -760,6 +803,8 @@ export default function BlogForm({ isEditMode = false }) {
               <span>Upload Image</span>
               <input
                 type="file"
+                name="image"
+                required
                 style={{
                   position: 'absolute',
                   width: '1px',
