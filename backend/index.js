@@ -19,18 +19,28 @@ const morgan = require('morgan');
 const app = express();
 
 // Configure CORS
-const allowedOrigins = ['http://localhost:3000', 'https://courseselling-2.onrender.com'];
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://skill24.in',
+  'https://www.skill24.in',
+  'https://courseselling-2.onrender.com'
+];
 
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      console.log('Not allowed by CORS:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type',
     'Authorization',
@@ -41,7 +51,6 @@ const corsOptions = {
     'X-Skip-Interceptor',
     'withCredentials'
   ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   exposedHeaders: [
     'Content-Range',
     'X-Content-Range',
