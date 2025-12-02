@@ -16,18 +16,31 @@ const createAxiosInstance = () => {
   // or localhost for development
   let baseURL = process.env.REACT_APP_BASE_URL;
   
+  // Force detection - check current location
+  const hostname = window.location.hostname;
+  const origin = window.location.origin;
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '' || origin.includes('localhost');
+  
+  console.log('[API Connector] Initializing...');
+  console.log('[API Connector] Hostname:', hostname);
+  console.log('[API Connector] Origin:', origin);
+  console.log('[API Connector] Is Localhost:', isLocalhost);
+  
   if (!baseURL) {
-    // If no env var, check if we're in production (not localhost)
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    if (!isLocalhost) {
       // Production: use relative URLs (empty string = same domain)
       baseURL = '';
+      console.log('[API Connector] ✅ Production mode - using relative URLs');
     } else {
       // Development: use localhost
       baseURL = 'http://localhost:4000';
+      console.log('[API Connector] ⚠️ Development mode - using localhost:4000');
     }
+  } else {
+    console.log('[API Connector] Using REACT_APP_BASE_URL:', baseURL);
   }
   
-  console.log('Using baseURL:', baseURL || '(relative to current domain)');
+  console.log('[API Connector] Final baseURL:', baseURL || '(relative to current domain)');
   
   const instance = axios.create({
     baseURL: baseURL,
