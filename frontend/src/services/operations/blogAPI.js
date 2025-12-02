@@ -54,8 +54,17 @@ export const createBlog = async (formData, token) => {
     }
 
     // Create a new axios instance for file upload to avoid Content-Type header conflicts
+    // Auto-detect API URL (production uses relative URLs, dev uses localhost)
+    const getBaseURL = () => {
+      if (process.env.REACT_APP_BASE_URL) return process.env.REACT_APP_BASE_URL;
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        return ''; // Production: relative URLs
+      }
+      return 'http://localhost:4000'; // Development
+    };
+    
     const axiosInstance = axios.create({
-      baseURL: process.env.REACT_APP_BASE_URL || 'http://localhost:4000',
+      baseURL: getBaseURL(),
       withCredentials: true,
       headers: {
         'Authorization': `Bearer ${token}`,

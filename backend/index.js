@@ -321,23 +321,23 @@ for (const possiblePath of possibleBuildPaths) {
   }
 }
 
-// If no build found, use the first path as default (will show error later)
+// If no build found, log warning but don't set invalid paths
 if (!buildPath) {
-  buildPath = possibleBuildPaths[0];
-  indexPath = path.join(buildPath, 'index.html');
   console.warn('⚠ React build directory not found. Tried paths:');
   possibleBuildPaths.forEach(p => console.warn('  -', p));
   console.warn('⚠ Make sure to run "npm run build" in the frontend directory');
   console.warn('⚠ Current working directory:', process.cwd());
   console.warn('⚠ __dirname:', __dirname);
+  console.warn('⚠ Server will start but React app will not be served until build is created');
+} else {
+  // Only serve static files if build directory exists
+  app.use(express.static(buildPath, {
+    maxAge: '1d', // Cache static assets for 1 day
+    etag: true,
+    lastModified: true
+  }));
+  console.log('✓ Static file serving enabled for:', buildPath);
 }
-
-// Serve static files from React build
-app.use(express.static(buildPath, {
-  maxAge: '1d', // Cache static assets for 1 day
-  etag: true,
-  lastModified: true
-}));
 
 // Error handling middleware (must be before catch-all route)
 app.use((err, req, res, next) => {
@@ -383,9 +383,36 @@ app.use((req, res, next) => {
   // Check if build path was found
   if (!buildPath || !indexPath) {
     console.error(`[SPA Route] ERROR: React build directory not found`);
-    return res.status(500).json({
+    console.error(`[SPA Route] Tried paths:`, possibleBuildPaths);
+    console.error(`[SPA Route] Current directory:`, process.cwd());
+    console.error(`[SPA Route] __dirname:`, __dirname);
+    
+    // Return a helpful HTML page instead of JSON for browser requests
+    if (req.headers.accept && req.headers.accept.includes('text/html')) {
+      return res.status(503).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Application Building...</title>
+          <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+            h1 { color: #333; }
+            p { color: #666; }
+          </style>
+        </head>
+        <body>
+          <h1>Application is Building</h1>
+          <p>The React application build is not yet available.</p>
+          <p>Please wait a few moments and refresh the page.</p>
+          <p><small>If this persists, check the server logs for build errors.</small></p>
+        </body>
+        </html>
+      `);
+    }
+    
+    return res.status(503).json({
       success: false,
-      message: 'React build not found. Please build the frontend application.',
+      message: 'React build not found. The application is still building. Please wait and try again.',
       error: process.env.NODE_ENV === 'development' ? `Tried paths: ${possibleBuildPaths.join(', ')}` : undefined
     });
   }
@@ -393,9 +420,33 @@ app.use((req, res, next) => {
   // Check if index.html exists before sending
   if (!fs.existsSync(indexPath)) {
     console.error(`[SPA Route] ERROR: index.html not found at ${indexPath}`);
-    return res.status(500).json({
+    console.error(`[SPA Route] Build path exists but index.html is missing`);
+    
+    // Return a helpful HTML page instead of JSON for browser requests
+    if (req.headers.accept && req.headers.accept.includes('text/html')) {
+      return res.status(503).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Build Incomplete</title>
+          <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+            h1 { color: #333; }
+            p { color: #666; }
+          </style>
+        </head>
+        <body>
+          <h1>Build Incomplete</h1>
+          <p>The React build directory exists but index.html is missing.</p>
+          <p>Please check the build process and try again.</p>
+        </body>
+        </html>
+      `);
+    }
+    
+    return res.status(503).json({
       success: false,
-      message: 'React build not found. Please build the frontend application.',
+      message: 'React build incomplete. index.html not found.',
       error: process.env.NODE_ENV === 'development' ? `Path: ${indexPath}` : undefined
     });
   }
