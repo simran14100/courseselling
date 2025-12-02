@@ -1100,7 +1100,12 @@ export async function addLiveClassToBatch(batchId, payload) {
       throw new Error('Invalid token: No user ID found in token');
     }
     
-    const response = await fetch(`http://localhost:4000/api/v1/admin/batches/${batchId}/live-classes`, {
+    // Auto-detect API URL
+    const apiBase = process.env.REACT_APP_BASE_URL || 
+      (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+        ? '' 
+        : 'http://localhost:4000');
+    const response = await fetch(`${apiBase}/api/v1/admin/batches/${batchId}/live-classes`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -435,35 +435,7 @@ if (hide) {
                        Contact
                       </Link>
                     </li>
-                    <li>
-  <Link
-    to="/university/schools"
-    style={{ 
-      textDecoration: 'none', 
-      color: '#191A1F', 
-      fontWeight: '600',
-      fontSize: '18px',
-      fontFamily: 'SF Pro Display, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important',
-      letterSpacing: '0.5px',
-      transition: 'all 0.3s ease',
-      position: 'relative',
-      padding: '8px 0',
-      textTransform:'none'
-    }}
-    onClick={handleUniversityNav}
-    onMouseEnter={(e) => {
-      e.target.style.color = '#07A698';
-      e.target.style.transform = 'translateY(-1px)';
-    }}
-    onMouseLeave={(e) => {
-      e.target.style.color = '#191A1F';
-      e.target.style.transform = 'translateY(0)';
-    }}
-  >
-    University
-  </Link>
-</li>
-                   
+                          
                      {/* <li>
                       <Link
                         to="/enrollment-payment"

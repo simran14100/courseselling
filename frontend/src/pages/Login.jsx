@@ -42,7 +42,11 @@ const Login = ({ isUniversity = false }) => {
   useEffect(() => {
     if (!isAdminMode) {
       try {
-        const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
+        // Use relative URL in production, localhost in development
+        const API_BASE = process.env.REACT_APP_BACKEND_URL || 
+          (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+            ? '' 
+            : 'http://localhost:4000');
         fetch(`${API_BASE}/api/v1/auth/secure/clear`, {
           credentials: 'include',
           mode: 'cors',
@@ -60,7 +64,11 @@ const Login = ({ isUniversity = false }) => {
       // For normal login (not admin mode), proactively clear the secure scope cookie
       if (!isAdminMode) {
         try {
-          const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
+          // Use relative URL in production, localhost in development
+          const API_BASE = process.env.REACT_APP_BACKEND_URL || 
+            (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+              ? '' 
+              : 'http://localhost:4000');
           await fetch(`${API_BASE}/api/v1/auth/secure/clear`, {
             credentials: 'include',
             mode: 'cors',

@@ -297,21 +297,31 @@ app.put("/api/v1/profile/updateProfile", auth, updateProfile);
 
 app.use('/api/v1/blog', blogRoutes);
 
-// Other routes
+// Serve static files from React build
+const buildPath = path.join(__dirname, '../frontend/build');
+const indexPath = path.join(buildPath, 'index.html');
 
+// Check if build directory exists
+if (fs.existsSync(buildPath)) {
+  console.log('✓ React build directory found at:', buildPath);
+  if (fs.existsSync(indexPath)) {
+    console.log('✓ index.html found at:', indexPath);
+  } else {
+    console.warn('⚠ index.html not found at:', indexPath);
+  }
+} else {
+  console.warn('⚠ React build directory not found at:', buildPath);
+  console.warn('⚠ Make sure to run "npm run build" in the frontend directory');
+}
 
+// Serve static files from React build
+app.use(express.static(buildPath, {
+  maxAge: '1d', // Cache static assets for 1 day
+  etag: true,
+  lastModified: true
+}));
 
-
-
-// Testing the server
-app.get("/", (req, res) => {
-	return res.json({
-		success: true,
-		message: "Your server is up and running ...",
-	});
-});
-
-// Error handling middleware
+// Error handling middleware (must be before catch-all route)
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({
@@ -321,14 +331,61 @@ app.use((err, req, res, next) => {
   });
 });
 
+// 404 handler for API routes only (must use a function, not `/api/*` pattern)
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    console.log(`404 - API route not found: ${req.method} ${req.originalUrl}`);
+    return res.status(404).json({
+      success: false,
+      message: 'API route not found'
+    });
+  }
+  next();
+});
 
-
-// 404 handler
-app.use((req, res) => {
-  console.log(`404 - Route not found: ${req.method} ${req.originalUrl}`);
-  res.status(404).json({
-    success: false,
-    message: 'Route not found'
+// Catch-all handler: serve React app for all non-API GET requests
+// This allows React Router to handle client-side routing
+app.use((req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+  
+  // Only handle GET requests for non-API routes
+  if (req.method !== 'GET') {
+    return res.status(404).json({
+      success: false,
+      message: 'Route not found'
+    });
+  }
+  
+  // Log the request for debugging
+  console.log(`[SPA Route] Serving index.html for: ${req.method} ${req.originalUrl}`);
+  
+  // Check if index.html exists before sending
+  if (!fs.existsSync(indexPath)) {
+    console.error(`[SPA Route] ERROR: index.html not found at ${indexPath}`);
+    return res.status(500).json({
+      success: false,
+      message: 'React build not found. Please build the frontend application.',
+      error: process.env.NODE_ENV === 'development' ? `Path: ${indexPath}` : undefined
+    });
+  }
+  
+  // Send index.html
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error('[SPA Route] Error sending index.html:', err);
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          message: 'Error serving application',
+          error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+      }
+    } else {
+      console.log(`[SPA Route] Successfully served index.html for: ${req.originalUrl}`);
+    }
   });
 });
 

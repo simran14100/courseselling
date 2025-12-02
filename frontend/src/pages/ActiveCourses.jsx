@@ -48,9 +48,14 @@ export default function ActiveCourses() {
       try {
         setLoading(true);
         
+        // Auto-detect API URL
+        const apiBase = process.env.REACT_APP_BASE_URL || 
+          (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+            ? '' 
+            : 'http://localhost:4000');
         // Using native fetch API
         const response = await fetch(
-          `${process.env.REACT_APP_BASE_URL || 'http://localhost:4000'}/api/v1/profile/getEnrolledCourses`,
+          `${apiBase}/api/v1/profile/getEnrolledCourses`,
           {
             method: 'GET',
             headers: {

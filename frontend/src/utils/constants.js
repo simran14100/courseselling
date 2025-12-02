@@ -1,5 +1,20 @@
-// API Base URL
-export const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+// API Base URL - Auto-detect production vs development
+const getAPIURL = () => {
+  if (process.env.REACT_APP_API_URL) return process.env.REACT_APP_API_URL;
+  if (process.env.REACT_APP_BASE_URL) return process.env.REACT_APP_BASE_URL;
+  
+  // Check if we're in production (not localhost)
+  if (typeof window !== 'undefined' && 
+      window.location.hostname !== 'localhost' && 
+      window.location.hostname !== '127.0.0.1') {
+    // Production: use relative URLs (empty string = same domain)
+    return '';
+  }
+  // Development: use localhost
+  return 'http://localhost:4000';
+};
+
+export const API_URL = getAPIURL();
 
 // Account Types - must match the backend's User model enum values
 export const ACCOUNT_TYPE = {

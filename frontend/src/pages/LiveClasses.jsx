@@ -93,8 +93,13 @@ export default function LiveClasses() {
         console.log('Making API request to fetch live classes...');
         const startTime = Date.now();
         
+        // Auto-detect API URL
+        const apiBase = process.env.REACT_APP_BASE_URL || 
+          (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+            ? '' 
+            : 'http://localhost:4000');
         // Fetch live classes for the student
-        const response = await fetch(`http://localhost:4000/api/v1/profile/live-classes`, {
+        const response = await fetch(`${apiBase}/api/v1/profile/live-classes`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,

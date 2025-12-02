@@ -12,8 +12,22 @@ if (!process.env.REACT_APP_BASE_URL) {
 
 // Create a clean axios instance with minimal configuration
 const createAxiosInstance = () => {
-  const baseURL = process.env.REACT_APP_BASE_URL || 'http://localhost:4000';
-  console.log('Using baseURL:', baseURL);
+  // Use environment variable if set, otherwise use relative URLs for production
+  // or localhost for development
+  let baseURL = process.env.REACT_APP_BASE_URL;
+  
+  if (!baseURL) {
+    // If no env var, check if we're in production (not localhost)
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      // Production: use relative URLs (empty string = same domain)
+      baseURL = '';
+    } else {
+      // Development: use localhost
+      baseURL = 'http://localhost:4000';
+    }
+  }
+  
+  console.log('Using baseURL:', baseURL || '(relative to current domain)');
   
   const instance = axios.create({
     baseURL: baseURL,

@@ -463,9 +463,14 @@ export async function fetchEnrolledStudents(token, page = 1, limit = 10, search 
       showSuccess("Enrollment already completed")
       
       try {
+        // Auto-detect API URL
+        const apiBase = process.env.REACT_APP_BASE_URL || 
+          (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+            ? '' 
+            : 'http://localhost:4000');
         const userResponse = await apiConnector(
           "GET",
-          "http://localhost:4000/api/v1/profile/getUserDetails",
+          `${apiBase}/api/v1/profile/getUserDetails`,
           null,
           {
             Authorization: `Bearer ${token}`

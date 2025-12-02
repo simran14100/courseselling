@@ -10,7 +10,12 @@ const DynamicFAQ = () => {
   useEffect(() => {
     const fetchFAQs = async () => {
       try {
-        const response = await axios.get('http://localhost:4000/api/v1/faq');
+        // Auto-detect API URL
+        const apiBase = process.env.REACT_APP_BASE_URL || 
+          (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+            ? '' 
+            : 'http://localhost:4000');
+        const response = await axios.get(`${apiBase}/api/v1/faq`);
         if (response.data.success) {
           setFaqs(response.data.data);
         }
