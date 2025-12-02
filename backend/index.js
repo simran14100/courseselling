@@ -298,20 +298,38 @@ app.put("/api/v1/profile/updateProfile", auth, updateProfile);
 app.use('/api/v1/blog', blogRoutes);
 
 // Serve static files from React build
-const buildPath = path.join(__dirname, '../frontend/build');
-const indexPath = path.join(buildPath, 'index.html');
+// Try multiple possible paths for different deployment environments
+const possibleBuildPaths = [
+  path.join(__dirname, '../frontend/build'),  // Local development / standard
+  path.join(__dirname, '../../frontend/build'), // Alternative structure
+  path.join(process.cwd(), 'frontend/build'),  // Render.com / absolute
+  path.join(process.cwd(), 'build'),           // If build is in root
+];
 
-// Check if build directory exists
-if (fs.existsSync(buildPath)) {
-  console.log('✓ React build directory found at:', buildPath);
-  if (fs.existsSync(indexPath)) {
+let buildPath = null;
+let indexPath = null;
+
+// Find the first existing build path
+for (const possiblePath of possibleBuildPaths) {
+  const possibleIndexPath = path.join(possiblePath, 'index.html');
+  if (fs.existsSync(possibleIndexPath)) {
+    buildPath = possiblePath;
+    indexPath = possibleIndexPath;
+    console.log('✓ React build directory found at:', buildPath);
     console.log('✓ index.html found at:', indexPath);
-  } else {
-    console.warn('⚠ index.html not found at:', indexPath);
+    break;
   }
-} else {
-  console.warn('⚠ React build directory not found at:', buildPath);
+}
+
+// If no build found, use the first path as default (will show error later)
+if (!buildPath) {
+  buildPath = possibleBuildPaths[0];
+  indexPath = path.join(buildPath, 'index.html');
+  console.warn('⚠ React build directory not found. Tried paths:');
+  possibleBuildPaths.forEach(p => console.warn('  -', p));
   console.warn('⚠ Make sure to run "npm run build" in the frontend directory');
+  console.warn('⚠ Current working directory:', process.cwd());
+  console.warn('⚠ __dirname:', __dirname);
 }
 
 // Serve static files from React build
@@ -361,6 +379,16 @@ app.use((req, res, next) => {
   
   // Log the request for debugging
   console.log(`[SPA Route] Serving index.html for: ${req.method} ${req.originalUrl}`);
+  
+  // Check if build path was found
+  if (!buildPath || !indexPath) {
+    console.error(`[SPA Route] ERROR: React build directory not found`);
+    return res.status(500).json({
+      success: false,
+      message: 'React build not found. Please build the frontend application.',
+      error: process.env.NODE_ENV === 'development' ? `Tried paths: ${possibleBuildPaths.join(', ')}` : undefined
+    });
+  }
   
   // Check if index.html exists before sending
   if (!fs.existsSync(indexPath)) {
