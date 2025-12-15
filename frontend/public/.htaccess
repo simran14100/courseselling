@@ -1,0 +1,52 @@
+# Apache Configuration for React SPA with Node.js Backend
+RewriteEngine On
+
+# ======== SERVE REACT APP FROM APACHE ========
+# React build files are served directly by Apache
+
+# First, try to serve the actual file (like CSS, JS, images)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# For React Router - serve index.html for all non-API routes
+# This handles client-side routing
+RewriteCond %{REQUEST_URI} !^/api [NC]
+RewriteRule ^(.*)$ /LMSCourse/index.html [L]
+
+# ======== PROXY ONLY API REQUESTS TO NODE.JS ========
+# Only proxy API requests to Node.js backend
+RewriteCond %{REQUEST_URI} ^/api/ [NC]
+RewriteRule ^api/(.*)$ http://localhost:4000/api/$1 [P,L]
+
+# Optional: Proxy WebSocket requests
+RewriteCond %{HTTP:Upgrade} =websocket [NC]
+RewriteCond %{REQUEST_URI} ^/socket\.io [NC]
+RewriteRule /(.*) ws://localhost:4000/$1 [P,L]
+
+# ======== SECURITY & PERFORMANCE ========
+# Cache static assets
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/jpg "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/gif "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType font/woff "access plus 1 year"
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set X-XSS-Protection "1; mode=block"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Enable compression
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript
+</IfModule>

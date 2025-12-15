@@ -143,6 +143,7 @@ const sanitize = (req, res, next) => {
 
 // CORS middleware is already configured at the top of the file
 
+
 // Security headers are already configured above
 // Remove duplicate middleware
 
@@ -282,8 +283,6 @@ app.use("/api/v1/super-admin", superAdminRoutes);
 
 
 
-
-
 app.use("/api/v1/cloudinary", cloudinaryRoutes);
 
 
@@ -349,123 +348,23 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler for API routes only (must use a function, not `/api/*` pattern)
-app.use((req, res, next) => {
-  if (req.path.startsWith('/api/')) {
-    console.log(`404 - API route not found: ${req.method} ${req.originalUrl}`);
-    return res.status(404).json({
-      success: false,
-      message: 'API route not found'
-    });
-  }
-  next();
-});
+// Catch-all route for frontend (should be after all API routes and static serving)
 
-// Catch-all handler: serve React app for all non-API GET requests
-// This allows React Router to handle client-side routing
-app.use((req, res, next) => {
-  // Skip API routes
-  if (req.path.startsWith('/api/')) {
-    return next();
-  }
-  
-  // Only handle GET requests for non-API routes
-  if (req.method !== 'GET') {
-    return res.status(404).json({
+// This middleware will be called for any requests that haven't been matched by other routes.
+// It should always be the last middleware in the chain, after all other routes and static file serving.
+app.use((req, res) => {
+  // If no other route handled the request, and a build path exists, serve the React app's index.html
+  if (buildPath && indexPath) {
+    console.log(`Serving index.html for unmatched route: ${req.method} ${req.originalUrl}`);
+    res.sendFile(indexPath);
+  } else {
+    // If no build found or in development, return a generic 404 for non-API routes
+    console.log(`404 - No frontend build or API route found: ${req.method} ${req.originalUrl}`);
+    res.status(404).json({
       success: false,
-      message: 'Route not found'
+      message: 'Resource not found or frontend build not available.'
     });
   }
-  
-  // Log the request for debugging
-  console.log(`[SPA Route] Serving index.html for: ${req.method} ${req.originalUrl}`);
-  
-  // Check if build path was found
-  if (!buildPath || !indexPath) {
-    console.error(`[SPA Route] ERROR: React build directory not found`);
-    console.error(`[SPA Route] Tried paths:`, possibleBuildPaths);
-    console.error(`[SPA Route] Current directory:`, process.cwd());
-    console.error(`[SPA Route] __dirname:`, __dirname);
-    
-    // Return a helpful HTML page instead of JSON for browser requests
-    if (req.headers.accept && req.headers.accept.includes('text/html')) {
-      return res.status(503).send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Application Building...</title>
-          <style>
-            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-            h1 { color: #333; }
-            p { color: #666; }
-          </style>
-        </head>
-        <body>
-          <h1>Application is Building</h1>
-          <p>The React application build is not yet available.</p>
-          <p>Please wait a few moments and refresh the page.</p>
-          <p><small>If this persists, check the server logs for build errors.</small></p>
-        </body>
-        </html>
-      `);
-    }
-    
-    return res.status(503).json({
-      success: false,
-      message: 'React build not found. The application is still building. Please wait and try again.',
-      error: process.env.NODE_ENV === 'development' ? `Tried paths: ${possibleBuildPaths.join(', ')}` : undefined
-    });
-  }
-  
-  // Check if index.html exists before sending
-  if (!fs.existsSync(indexPath)) {
-    console.error(`[SPA Route] ERROR: index.html not found at ${indexPath}`);
-    console.error(`[SPA Route] Build path exists but index.html is missing`);
-    
-    // Return a helpful HTML page instead of JSON for browser requests
-    if (req.headers.accept && req.headers.accept.includes('text/html')) {
-      return res.status(503).send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Build Incomplete</title>
-          <style>
-            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-            h1 { color: #333; }
-            p { color: #666; }
-          </style>
-        </head>
-        <body>
-          <h1>Build Incomplete</h1>
-          <p>The React build directory exists but index.html is missing.</p>
-          <p>Please check the build process and try again.</p>
-        </body>
-        </html>
-      `);
-    }
-    
-    return res.status(503).json({
-      success: false,
-      message: 'React build incomplete. index.html not found.',
-      error: process.env.NODE_ENV === 'development' ? `Path: ${indexPath}` : undefined
-    });
-  }
-  
-  // Send index.html
-  res.sendFile(indexPath, (err) => {
-    if (err) {
-      console.error('[SPA Route] Error sending index.html:', err);
-      if (!res.headersSent) {
-        res.status(500).json({
-          success: false,
-          message: 'Error serving application',
-          error: process.env.NODE_ENV === 'development' ? err.message : undefined
-        });
-      }
-    } else {
-      console.log(`[SPA Route] Successfully served index.html for: ${req.originalUrl}`);
-    }
-  });
 });
 
 const PORT = process.env.PORT || 4000;
