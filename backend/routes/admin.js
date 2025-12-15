@@ -61,7 +61,7 @@ router.get("/phd-enrollment-paid-students", auth, isAdminLevel, getPhdEnrollment
 
 
 // Get all approved instructors (public route)
-router.get("/all-instructors", getAllInstructors);
+router.get("/all-instructors", (req, res, next) => { console.log('DEBUG: /api/v1/admin/all-instructors route hit'); next(); }, getAllInstructors);
 
 // Get individual instructor by ID (public route)
 router.get("/all-instructors/:instructorId", getInstructorById);

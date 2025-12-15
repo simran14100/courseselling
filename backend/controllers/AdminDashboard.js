@@ -364,6 +364,7 @@ exports.getPhdEnrollmentPaidStudents = async (req, res) => {
 // Get all approved instructors
 exports.getAllInstructors = async (req, res) => {
     try {
+        console.log('DEBUG: Inside getAllInstructors controller');
         const instructors = await User.find({
             accountType: 'Instructor',
             approved: true
@@ -372,6 +373,7 @@ exports.getAllInstructors = async (req, res) => {
         .select('-password -token -resetPasswordExpires')
         .sort({ createdAt: -1 });
 
+        console.log('DEBUG: Instructors fetched:', instructors.length);
         res.status(200).json({
             success: true,
             data: instructors
