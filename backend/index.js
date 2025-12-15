@@ -375,6 +375,7 @@ app.use((req, res) => {
     success: false,
     message: 'API route not found or resource not available.'
   });
+});
 
 const PORT = process.env.PORT || 4000;
 
