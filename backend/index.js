@@ -330,12 +330,13 @@ if (!buildPath) {
   console.warn('⚠ Server will start but React app will not be served until build is created');
 } else {
   // Only serve static files if build directory exists
-  app.use(express.static(buildPath, {
+  // Serve static assets under the /LMSCourse path
+  app.use('/LMSCourse', express.static(buildPath, {
     maxAge: '1d', // Cache static assets for 1 day
     etag: true,
     lastModified: true
   }));
-  console.log('✓ Static file serving enabled for:', buildPath);
+  console.log('✓ Static file serving enabled for:', buildPath, 'under /LMSCourse');
 }
 
 // Error handling middleware (must be before catch-all route)
@@ -352,20 +353,28 @@ app.use((err, req, res, next) => {
 
 // This middleware will be called for any requests that haven't been matched by other routes.
 // It should always be the last middleware in the chain, after all other routes and static file serving.
-app.use((req, res) => {
-  // If no other route handled the request, and a build path exists, serve the React app's index.html
+app.use('/LMSCourse', (req, res) => {
+  // If no other route handled the request within /LMSCourse, and a build path exists, serve the React app's index.html
   if (buildPath && indexPath) {
-    console.log(`Serving index.html for unmatched route: ${req.method} ${req.originalUrl}`);
+    console.log(`Serving index.html for unmatched /LMSCourse route: ${req.method} ${req.originalUrl}`);
     res.sendFile(indexPath);
   } else {
     // If no build found or in development, return a generic 404 for non-API routes
-    console.log(`404 - No frontend build or API route found: ${req.method} ${req.originalUrl}`);
+    console.log(`404 - No frontend build or API route found for /LMSCourse: ${req.method} ${req.originalUrl}`);
     res.status(404).json({
       success: false,
-      message: 'Resource not found or frontend build not available.'
+      message: 'Resource not found or frontend build not available for /LMSCourse.'
     });
   }
 });
+
+// Handle all other unmatched routes (e.g., direct API calls that don't exist) with a 404
+app.use((req, res) => {
+  console.log(`404 - API route not found or general unmatched route: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({
+    success: false,
+    message: 'API route not found or resource not available.'
+  });
 
 const PORT = process.env.PORT || 4000;
 
