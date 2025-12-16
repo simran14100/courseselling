@@ -150,9 +150,11 @@ function AppRoutes() {
   };
   
   return (
-    <Routes>
+    <Routes >
       {/* Public Routes */}
-      <Route path="/LMSCourse" element={<Home />} />
+      <Route path="/" element={<Navigate to="/home" replace />} />
+      <Route path="/home" element={<Home />} />
+      {/* <Route path="/home" element={<Home />} /> */}
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/login" element={<Login />} />
@@ -455,7 +457,7 @@ function App() {
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
-        <Router>
+        <Router basename="/LMSCourse">
           <div className="flex min-h-screen flex-col">
             <TokenManager />
             <Navbar />
