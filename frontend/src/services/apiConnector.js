@@ -1,12 +1,13 @@
 import axios from "axios";
 import { store } from "../store";
-import { logout as logoutAction } from "../store/slices/authSlice";
+import { triggerLogout } from "../store/slices/authSlice";
 import { clearUser } from "../store/slices/profileSlice";
 import { refreshToken } from "./operations/authApi";
 import { showError } from "../utils/toast";
 import { refreshTokenIfNeeded } from "../utils/tokenUtils";
-
+import {logout as logoutAction} from "../store/slices/authSlice";
 // Create a clean axios instance with minimal configuration
+
 const createAxiosInstance = () => {
   // Always use relative URLs or the environment variable
   let baseURL = process.env.REACT_APP_BASE_URL || '';
@@ -170,9 +171,9 @@ const createAxiosInstance = () => {
         store.dispatch(logoutAction());
         
         // Only redirect if we're not already on the login page
-        if (!window.location.pathname.includes('/login')) {
-          console.log('Redirecting to login...');
-          window.location.href = '/login';
+        const navigateFunction = store.getState().auth.navigateFunction;
+        if (navigateFunction && !window.location.pathname.includes('/login')) {
+          store.dispatch(triggerLogout(navigateFunction));
         }
         
         return Promise.reject(error);
@@ -315,10 +316,10 @@ axiosInstance.interceptors.response.use(
       showError("Network error. Please check your connection and try again.");
     } else if (error.response?.status === 401) {
       // Handle 401 Unauthorized (session expired)
-      store.dispatch(logoutAction());
+      const navigateFunction = store.getState().auth.navigateFunction;
+      store.dispatch(triggerLogout(navigateFunction));
       store.dispatch(clearUser());
       showError("Session expired. Please login again.");
-      window.location.href = "/login";
     } else if (error.response?.data?.message) {
       showError(error.response.data.message);
     } else if (error.message) {

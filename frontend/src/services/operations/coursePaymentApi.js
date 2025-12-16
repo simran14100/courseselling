@@ -9,7 +9,6 @@ const BASE_URL = process.env.REACT_APP_BASE_URL;
 const { CAPTURE_PAYMENT_API, VERIFY_PAYMENT_API, SEND_PAYMENT_SUCCESS_EMAIL_API } = payment;
 
 
-console.log('Frontend Razorpay Key (at import):', process.env.REACT_APP_RAZORPAY_KEY);
 
 // Load the Razorpay SDK from the CDN
 function loadScript(src) {
@@ -236,7 +235,7 @@ export async function buyCourse(
       const message = outerError.response?.data?.message || 'Please complete your enrollment fee payment to continue with your purchase';
       
       // Use window.location.href for a hard redirect to ensure the page fully reloads
-      window.location.href = `/enrollment-payment?from=${encodeURIComponent(window.location.pathname)}&message=${encodeURIComponent(message)}`;
+      window.location.href = `${process.env.PUBLIC_URL || ''}/enrollment-payment?from=${encodeURIComponent(window.location.pathname)}&message=${encodeURIComponent(message)}`;
       return;
     }
     
@@ -246,7 +245,7 @@ export async function buyCourse(
     // If there's a redirect URL in the error response, use it
     if (outerError.response?.data?.redirectTo) {
       setTimeout(() => {
-        window.location.href = outerError.response.data.redirectTo;
+        window.location.href = `${process.env.PUBLIC_URL || ''}${outerError.response.data.redirectTo}`;
       }, 2000);
     }
   } finally {

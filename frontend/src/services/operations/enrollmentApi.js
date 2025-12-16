@@ -10,7 +10,6 @@ const {
   RESET_ENROLLMENT_STATUS_API,
 } = enrollment
 
-console.log('Frontend Razorpay Key (at import):', process.env.REACT_APP_RAZORPAY_KEY);
 
 // Load the Razorpay SDK from the CDN
 function loadScript(src) {
@@ -74,7 +73,6 @@ export async function buyEnrollment(token, user, navigate, dispatch, returnTo = 
     }
 
     // Opening the Razorpay SDK
-    console.log('Frontend Razorpay Key (before opening Razorpay):', orderData.key);
     
     if (!orderData.key) {
       throw new Error("Razorpay key not found in the order response");

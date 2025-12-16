@@ -1,10 +1,6 @@
 // Importing necessary modules and packages
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
-console.log('Loading .env from:', path.resolve(__dirname, '.env'));
-console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID);
-console.log('RAZORPAY_KEY_SECRET:', process.env.RAZORPAY_KEY_SECRET ? 'SET' : 'NOT SET');
-console.log('MONGODB_URL:', process.env.MONGODB_URL);
 
 const express = require("express");
 const cors = require("cors");
@@ -49,7 +45,6 @@ const corsOptions = {
     if (isAllowed) {
       callback(null, true);
     } else {
-      console.log('Not allowed by CORS:', origin);
       callback(new Error(`Not allowed by CORS: ${origin}`));
     }
   },
@@ -100,6 +95,7 @@ app.use(morgan('dev'));
 // Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.set('trust proxy', 1); // Trust first proxy for rate limiting and IP resolution
 
 // Apply rate limiting
 const limiter = rateLimit({
@@ -219,20 +215,12 @@ app.use(hpp());
 app.use(morgan('dev'));
 
 // Log all requests
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  if (req.method === 'POST' && req.headers['content-type']?.includes('multipart/form-data')) {
-    console.log('Multipart form data detected');
-  }
-  next();
-});
 
 // Configure a cross-platform temporary directory for uploads
 const uploadTmpDir = path.join(os.tmpdir(), "webmok-uploads");
 try {
   if (!fs.existsSync(uploadTmpDir)) {
     fs.mkdirSync(uploadTmpDir, { recursive: true });
-    console.log("Created temp upload directory:", uploadTmpDir);
   }
 } catch (e) {
   console.error("Failed to create temp upload directory:", e);
@@ -255,7 +243,6 @@ app.use("/api/v1/profile", profileRoutes);
 
 // Mount FinalData routes
 
-console.log('Mounted final data routes at /api/v1/final-data');
 
 app.use("/api/v1/course", courseRoutes);
 app.use("/api/v1/payment", paymentRoutes);
@@ -322,12 +309,6 @@ for (const possiblePath of possibleBuildPaths) {
 
 // If no build found, log warning but don't set invalid paths
 if (!buildPath) {
-  console.warn('⚠ React build directory not found. Tried paths:');
-  possibleBuildPaths.forEach(p => console.warn('  -', p));
-  console.warn('⚠ Make sure to run "npm run build" in the frontend directory');
-  console.warn('⚠ Current working directory:', process.cwd());
-  console.warn('⚠ __dirname:', __dirname);
-  console.warn('⚠ Server will start but React app will not be served until build is created');
 } else {
   // Only serve static files if build directory exists
   // Serve static assets under the /LMSCourse path
@@ -336,7 +317,6 @@ if (!buildPath) {
     etag: true,
     lastModified: true
   }));
-  console.log('✓ Static file serving enabled for:', buildPath, 'under /LMSCourse');
 }
 
 // Error handling middleware (must be before catch-all route)
@@ -350,43 +330,32 @@ app.use((err, req, res, next) => {
 });
 
 // Catch-all route for frontend (should be after all API routes and static serving)
-
 // This middleware will be called for any requests that haven't been matched by other routes.
 // It should always be the last middleware in the chain, after all other routes and static file serving.
-app.use('/LMSCourse', (req, res) => {
-  // If no other route handled the request within /LMSCourse, and a build path exists, serve the React app's index.html
+app.use((req, res) => {
+  // If no other route handled the request, and a build path exists, serve the React app's index.html
   if (buildPath && indexPath) {
-    console.log(`Serving index.html for unmatched /LMSCourse route: ${req.method} ${req.originalUrl}`);
     res.sendFile(indexPath);
   } else {
     // If no build found or in development, return a generic 404 for non-API routes
-    console.log(`404 - No frontend build or API route found for /LMSCourse: ${req.method} ${req.originalUrl}`);
     res.status(404).json({
       success: false,
-      message: 'Resource not found or frontend build not available for /LMSCourse.'
+      message: 'Frontend build not available or resource not found.'
     });
   }
 });
 
-// Handle all other unmatched routes (e.g., direct API calls that don't exist) with a 404
-app.use((req, res) => {
-  console.log(`404 - API route not found or general unmatched route: ${req.method} ${req.originalUrl}`);
-  res.status(404).json({
-    success: false,
-    message: 'API route not found or resource not available.'
-  });
-});
 
 const PORT = process.env.PORT || 4000;
 
 // Function to start the server
 const startServer = (port) => {
-  const server = app.listen(port, () => {
+  app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
   }).on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-      console.log(`Port ${port} is in use, trying port ${Number(port) + 1}...`);
-      startServer(Number(port) + 1);
+      console.error(`Port ${port} is already in use. Please try another port or stop the process currently using it.`);
+      process.exit(1);
     } else {
       console.error('Server error:', err);
       process.exit(1);
@@ -403,9 +372,7 @@ if (require.main === module) {
   database.connect()
     .then(() => {
       const PORT = process.env.PORT || 4000;
-      app.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT}`);
-      });
+      startServer(PORT);
     })
     .catch((err) => {
       console.error('Failed to connect to database:', err);

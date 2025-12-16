@@ -1,6 +1,6 @@
 import axios from "axios";
 import { showSuccess, showError, showLoading, dismissToast, dismissAllToasts } from "../../utils/toast"
-import { setLoading, setToken } from "../../store/slices/authSlice"
+import { setLoading, setToken, triggerLogout } from "../../store/slices/authSlice"
 import { setUser, updateUser, setLoading as setProfileLoading } from "../../store/slices/profileSlice"
 import { apiConnector } from "../apiConnector"
 import { auth, profile } from "../apis"
@@ -98,11 +98,14 @@ export function universitySignup(userData) {
               accountType: userData.accountType
             }
           });
-        } else {
-          // Fallback to window.location if navigate function is not available
-          // eslint-disable-next-line no-restricted-globals
-          window.location.href = response.data.redirectTo;
-        }
+          } else {
+            // Fallback to window.location if navigate function is not available
+            const redirectUrl = response.data.redirectTo.startsWith('/') ? 
+              `${process.env.PUBLIC_URL || ''}${response.data.redirectTo}` : 
+              response.data.redirectTo;
+            // eslint-disable-next-line no-restricted-globals
+            window.location.href = redirectUrl;
+          }
         return response.data;
       }
 
@@ -230,8 +233,10 @@ export function universitySignup(userData) {
             });
           } else {
             // Fallback to window.location if navigate function is not available
+            // Construct the fallback URL with PUBLIC_URL
+            const fallbackUrl = `${process.env.PUBLIC_URL || ''}${loginUrl.pathname}${loginUrl.search}`;
             // eslint-disable-next-line no-restricted-globals
-            window.location.href = loginUrl.toString();
+            window.location.href = fallbackUrl;
           }
         }, 1000);
       }
@@ -1290,11 +1295,17 @@ export const logout = (navigate = null) => async (dispatch) => {
     }
 
     // Use the navigate function if provided, otherwise use window.location
+    console.log('DEBUG: process.env.PUBLIC_URL =', process.env.PUBLIC_URL);
+    console.log('DEBUG: redirectPath =', redirectPath);
+
+    // Always use the navigate function for redirection
+    // When using navigate function from React Router, it automatically handles the basename
+    // So we should NOT add basename here, just pass the relative path
+    console.log('Navigating using React Router navigate:', redirectPath);
     if (typeof navigate === 'function') {
       navigate(redirectPath, { replace: true });
     } else {
-      // eslint-disable-next-line no-restricted-globals
-      window.location.href = redirectPath;
+      console.error("Navigate function not provided to logout. Cannot redirect gracefully.");
     }
 
     return { success: logoutSuccessful };
@@ -1309,7 +1320,7 @@ export const logout = (navigate = null) => async (dispatch) => {
     };
 
   } finally {
-    // Clear any remaining toasts after a short delay
+      // Reset logout state and toast flag after delay
     setTimeout(() => {
       dismissAllToasts();
       dismissToast(toastId);
@@ -1541,7 +1552,7 @@ export function updateDisplayPicture(formData) {
 let isRefreshing = false;
 let refreshPromise = null;
 
-export const refreshToken = (refreshTokenValue = null) => {
+export const refreshToken = (refreshTokenValue = null, navigate = null) => {
   return async (dispatch) => {
     // If we're already refreshing, return the existing promise
     if (isRefreshing) {
@@ -1637,21 +1648,11 @@ export const refreshToken = (refreshTokenValue = null) => {
           
           console.log('Invalid or expired refresh token, logging out...');
           
-          // Clear stored tokens
-          localStorage.removeItem('token');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-          
-          // Reset Redux state
-          dispatch(setToken(null));
-          dispatch(setUser(null));
-          
-          // Only redirect if we're not already on the login page
-          if (!window.location.pathname.includes('/login')) {
-            // Add a small delay to ensure state is cleared before redirect
-            setTimeout(() => {
-              window.location.href = '/login';
-            }, 100);
+          // Dispatch triggerLogout instead of direct window.location.href
+          if (navigate) {
+            dispatch(triggerLogout(navigate));
+          } else {
+            console.error('Navigate function not provided to refreshToken. Cannot redirect gracefully. Not performing fallback window.location.href.');
           }
         }
         

@@ -1,5 +1,6 @@
 import jwtDecode from 'jwt-decode';
 import { store } from "../store";
+import { triggerLogout } from "../store/slices/authSlice";
 
 // Token storage functions
 export const getToken = () => {
@@ -62,7 +63,7 @@ const onRefreshed = (token) => {
   refreshSubscribers = [];
 };
 
-export const refreshTokenIfNeeded = async (forceRefresh = false) => {
+export const refreshTokenIfNeeded = async (forceRefresh = false, navigate = null) => {
   try {
     // Get tokens from both Redux state and localStorage for redundancy
     const state = store.getState();
@@ -118,7 +119,7 @@ export const refreshTokenIfNeeded = async (forceRefresh = false) => {
     
     // Dispatch the refresh token action
     console.log(' Dispatching refreshToken action...');
-    const action = await store.dispatch(refreshTokenAction(refreshTokenValue));
+    const action = await store.dispatch(refreshTokenAction(refreshTokenValue, navigate));
     const result = action.payload || action;
     
     if (!result?.success) {
@@ -164,12 +165,8 @@ export const refreshTokenIfNeeded = async (forceRefresh = false) => {
     
     // Only attempt logout if we're not already on the login page
     if (!window.location.pathname.includes('/login')) {
-      try {
-        const { logout } = await import("../services/operations/authApi");
-        store.dispatch(logout());
-      } catch (logoutError) {
-        console.error(' Error during logout:', logoutError);
-      }
+      // Use the global logout trigger from authSlice, passing undefined for navigate initially
+      store.dispatch(triggerLogout(navigate));
     }
     
     onRefreshed(false);

@@ -1,5 +1,5 @@
 import "./App.css";
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import React, { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { Provider, useSelector } from 'react-redux';
@@ -83,9 +83,6 @@ import DashboardLayout from './components/common/DashboardLayout';
 
 
 // Debug Redux store on app start
-console.log("App starting - Redux store state:", store.getState());
-console.log("App starting - localStorage debug:");
-debugLocalStorage();
 
 // Protected Route Component
 function ProtectedRoute({ children, allowedRoles }) {
@@ -93,17 +90,11 @@ function ProtectedRoute({ children, allowedRoles }) {
   const authState = useSelector((state) => state.auth);
   
   // Debug logging
-  console.log('ProtectedRoute - User:', user);
-  console.log('ProtectedRoute - Auth State:', authState);
-  console.log('ProtectedRoute - Allowed Roles:', allowedRoles);
-  
   if (!user) {
-    console.log('ProtectedRoute - No user found, redirecting to login');
-    return <Login />;
+    return <Navigate to="/login" replace />;
   }
   
   if (allowedRoles && !allowedRoles.includes(user.accountType)) {
-    console.log('ProtectedRoute - User role not allowed, redirecting to profile');
     // Redirect to appropriate dashboard based on user role
     const redirectPath = 
       user.accountType === ACCOUNT_TYPE.STUDENT ? '/dashboard/my-profile' :
@@ -114,7 +105,6 @@ function ProtectedRoute({ children, allowedRoles }) {
     return <Navigate to={redirectPath} replace />;
   }
   
-  console.log('ProtectedRoute - Access granted');
   return children;
 }
 
@@ -454,17 +444,28 @@ function AppRoutes() {
 }
 
 function App() {
+  // Keep basename as defined
+  const basename = process.env.PUBLIC_URL || '/LMSCourse';
+  
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
-        <Router basename="/LMSCourse">
+        {/* Add future flags here to suppress warnings */}
+        <BrowserRouter 
+          basename={basename}
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+            v7_normalizeFormMethod: true,
+            v7_fetcherPersist: true,
+          }}
+        >
           <div className="flex min-h-screen flex-col">
             <TokenManager />
             <Navbar />
             <main className="flex-1">
               <AppRoutes />
             </main>
-            {/* <Footer /> */}
             <Toaster 
               position="top-right"
               toastOptions={{
@@ -477,7 +478,7 @@ function App() {
               }}
             />
           </div>
-        </Router>
+        </BrowserRouter>
       </PersistGate>
     </Provider>
   );

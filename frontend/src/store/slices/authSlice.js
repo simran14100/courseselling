@@ -1,4 +1,5 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { logout as apiLogout } from '../../services/operations/authApi';
 
 // Helper function to safely get initial state from localStorage
 const getInitialState = () => ({
@@ -32,6 +33,9 @@ const authSlice = createSlice({
       } else {
         localStorage.removeItem('refreshToken');
       }
+    },
+    setNavigationFunction: (state, action) => {
+      state.navigateFunction = action.payload;
     },
     // Set the current user data from the server
     setUser: (state, action) => {
@@ -85,15 +89,24 @@ const authSlice = createSlice({
   },
 });
 
-export const { 
-  setToken, 
-  setUser, 
+export const {
+  setToken,
+  setUser,
   setProgramType,
-  setLoading, 
-  setSignupData, 
-  logout, 
+  setLoading,
+  setSignupData,
+  logout,
   resetAuth ,
-  setRefreshToken
+  setRefreshToken,
+  setNavigationFunction
 } = authSlice.actions;
+
+// Async thunk for triggering logout with navigation
+export const triggerLogout = createAsyncThunk(
+  'auth/triggerLogout',
+  async (navigate, { dispatch }) => {
+    await dispatch(apiLogout(navigate));
+  }
+);
 
 export default authSlice.reducer;
