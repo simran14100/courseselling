@@ -6,41 +6,18 @@ import { refreshToken } from "./operations/authApi";
 import { showError } from "../utils/toast";
 import { refreshTokenIfNeeded } from "../utils/tokenUtils";
 
-if (!process.env.REACT_APP_BASE_URL) {
-  console.error('REACT_APP_BASE_URL is not set in environment variables');
-}
-
 // Create a clean axios instance with minimal configuration
 const createAxiosInstance = () => {
-  // Use environment variable if set, otherwise use relative URLs for production
-  // or localhost for development
-  let baseURL = process.env.REACT_APP_BASE_URL;
-  
-  // Force detection - check current location
-  const hostname = window.location.hostname;
-  const origin = window.location.origin;
-  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '' || origin.includes('localhost');
+  // Always use relative URLs or the environment variable
+  let baseURL = process.env.REACT_APP_BASE_URL || '';
   
   console.log('[API Connector] Initializing...');
-  console.log('[API Connector] Hostname:', hostname);
-  console.log('[API Connector] Origin:', origin);
-  console.log('[API Connector] Is Localhost:', isLocalhost);
+  console.log('[API Connector] Using baseURL:', baseURL || '(relative URLs)');
   
+  // Remove localhost detection logic
   if (!baseURL) {
-    if (!isLocalhost) {
-      // Production: use relative URLs (empty string = same domain)
-      baseURL = '';
-      console.log('[API Connector] ✅ Production mode - using relative URLs');
-    } else {
-      // Development: use localhost
-      baseURL = 'http://localhost:4000';
-      console.log('[API Connector] ⚠️ Development mode - using localhost:4000');
-    }
-  } else {
-    console.log('[API Connector] Using REACT_APP_BASE_URL:', baseURL);
+    console.log('[API Connector] Using relative URLs - requests will be made to the same domain');
   }
-  
-  console.log('[API Connector] Final baseURL:', baseURL || '(relative to current domain)');
   
   const instance = axios.create({
     baseURL: baseURL,
@@ -61,16 +38,13 @@ const createAxiosInstance = () => {
       console.log('[API Request Interceptor] Processing request:', {
         url: config.url,
         method: config.method,
-        headers: config.headers,
         skipAuth: config.skipAuth,
-        isAuthRequest: config.url.includes('/auth/')
+        isAuthRequest: config.url?.includes('/auth/')
       });
 
       // Skip adding auth header for auth-related requests or if skipAuth is true
-      if (config.url.includes('/auth/') || config.skipAuth) {
+      if (config.url?.includes('/auth/') || config.skipAuth) {
         delete config.headers.Authorization;
-        // Ensure CORS headers are set for all requests
-        config.headers['X-Requested-With'] = 'XMLHttpRequest';
         console.log('[API Request Interceptor] Skipping auth for request');
         return config;
       }
@@ -79,30 +53,12 @@ const createAxiosInstance = () => {
       const state = store?.getState();
       const token = state?.auth?.token || localStorage.getItem('token');
       
-      console.log('[API Request Interceptor] Token state:', {
-        hasToken: !!token,
-        tokenLength: token ? token.length : 0,
-        tokenPrefix: token ? token.substring(0, 10) + '...' : 'none',
-        fromRedux: !!state?.auth?.token,
-        fromLocalStorage: !!localStorage.getItem('token')
-      });
-      
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
         console.log('[API Request Interceptor] Added Authorization header');
       } else {
         console.warn('[API Request Interceptor] No token found for authenticated request');
       }
-      
-      // Ensure CORS headers are set for all requests
-      config.headers['X-Requested-With'] = 'XMLHttpRequest';
-      
-      console.log('[API Request Interceptor] Final request config:', {
-        url: config.url,
-        method: config.method,
-        headers: config.headers,
-        params: config.params
-      });
       
       return config;
     },
@@ -124,7 +80,7 @@ const createAxiosInstance = () => {
       }
       
       // Skip refresh token logic for auth endpoints, retries, or if explicitly skipped
-      if (originalRequest.url.includes('/auth/') || originalRequest._retry || originalRequest._skipAuth) {
+      if (originalRequest.url?.includes('/auth/') || originalRequest._retry || originalRequest._skipAuth) {
         console.log('Skipping refresh for:', {
           url: originalRequest.url,
           isRetry: originalRequest._retry,
@@ -267,11 +223,10 @@ axiosInstance.interceptors.request.use(
     console.log('[Axios Interceptor] Processing request:', {
       url: config.url,
       method: config.method,
-      headers: config.headers
     });
 
     // Skip adding auth header for auth-related requests
-    if (config.url.includes('/auth/') || config.skipAuth) {
+    if (config.url?.includes('/auth/') || config.skipAuth) {
       console.log('[Axios Interceptor] Skipping auth for request');
       delete config.headers.Authorization;
       return config;
@@ -280,12 +235,6 @@ axiosInstance.interceptors.request.use(
     const state = store.getState();
     const token = state?.auth?.token || localStorage.getItem('token');
     
-    console.log('[Axios Interceptor] Token state:', {
-      hasToken: !!token,
-      fromRedux: !!state?.auth?.token,
-      fromLocalStorage: !!localStorage.getItem('token')
-    });
-
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
       console.log('[Axios Interceptor] Added Authorization header');
@@ -439,7 +388,6 @@ export const apiConnector = async (method, url, bodyData = null, headers = {}, p
       method,
       url,
       baseURL: axiosInstance.defaults.baseURL,
-      headers: requestConfig.headers,
       withCredentials,
       params: params || {},
     });

@@ -493,10 +493,10 @@ const Home = () => {
         {/* Background Elements */}
         <div className="hero-bg-wrap">
           <div className="hero-bg">
-            <img src="/assets/img/bg-img/hero-bg.png" alt="hero" />
+            <img src="/LMSCourse/assets/img/bg-img/hero-bg.png" alt="hero" />
           </div>
           <div className="hero-bg-shape">
-            <img src="/assets/img/shapes/hero-bg-shape.png" alt="hero" />
+            <img src="/LMSCourse/assets/img/shapes/hero-bg-shape.png" alt="hero" />
           </div>
           
           {/* Floating FAQ Text Box */}
@@ -921,14 +921,14 @@ const Home = () => {
             animate={{ rotate: 360 }}
             transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
           >
-            <img src="/assets/img/shapes/feature-shape-3.png" alt="shape" />
+            <img src="/LMSCourse/assets/img/shapes/feature-shape-3.png" alt="shape" />
           </motion.div>
           <motion.div 
             className="shape shape-2"
             animate={{ rotate: -360 }}
             transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
           >
-            <img src="/assets/img/shapes/feature-shape-4.png" alt="shape" />
+            <img src="/LMSCourse/assets/img/shapes/feature-shape-4.png" alt="shape" />
           </motion.div>
         </div>
         
@@ -1052,7 +1052,7 @@ const Home = () => {
                         <div className="course-author-box" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' , marginTop:'12px' }}>
                           <div className="course-author" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <div className="author-img">
-                              <img src="/assets/img/images/course-author-1.png" alt="course" />
+                              <img src="/LMSCourse/assets/img/images/course-author-1.png" alt="course" />
                             </div>
                             <div className="author-info">
                               <h4 className="name">{course.instructor?.firstName} {course.instructor?.lastName || "Instructor"}</h4>
@@ -1464,7 +1464,7 @@ const Home = () => {
                         }}>
                           <div className="course-author" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <div className="author-img">
-                              <img src="/assets/img/images/course-author-1.png" alt="course" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+                              <img src="/LMSCourse/assets/img/images/course-author-1.png" alt="course" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
                             </div>
                             <div className="author-info">
                               <h4 className="name" style={{ 
@@ -1773,22 +1773,22 @@ const Home = () => {
             <div className="col-lg-6 col-md-12" style={{ flex: '0 0 50%', maxWidth: '50%', padding: '0 15px' }}>
               <div className="faq-img-wrap-2">
                 <div className="faq-img-1">
-                  <img src="/assets/img/images/faq-img-2.png" alt="faq" />
+                  <img src="/LMSCourse/assets/img/images/faq-img-2.png" alt="faq" />
                 </div>
                 <div className="faq-img-2">
-                  <img src="/assets/img/images/faq-img-3.png" alt="faq" />
+                  <img src="/LMSCourse/assets/img/images/faq-img-3.png" alt="faq" />
                 </div>
                 <div className="faq-img-3">
-                  <img src="/assets/img/images/faq-img-4.png" alt="faq" />
+                  <img src="/LMSCourse/assets/img/images/faq-img-4.png" alt="faq" />
                 </div>
                 <div className="faq-text-box">
                   <h4 className="student">Instructor</h4>
                   <div className="faq-thumb-list-wrap">
                     <ul className="faq-thumb-list">
-                      <li><img src="/assets/img/images/faq-thumb-1.png" alt="faq" /></li>
-                      <li><img src="/assets/img/images/faq-thumb-2.png" alt="faq" /></li>
-                      <li><img src="/assets/img/images/faq-thumb-3.png" alt="faq" /></li>
-                      <li><img src="/assets/img/images/faq-thumb-4.png" alt="faq" /></li>
+                      <li><img src="/LMSCourse/assets/img/images/faq-thumb-1.png" alt="faq" /></li>
+                      <li><img src="/LMSCourse/assets/img/images/faq-thumb-2.png" alt="faq" /></li>
+                      <li><img src="/LMSCourse/assets/img/images/faq-thumb-3.png" alt="faq" /></li>
+                      <li><img src="/LMSCourse/assets/img/images/faq-thumb-4.png" alt="faq" /></li>
                       <li className="number">25+</li>
                     </ul>
                     <p><span>200+</span> <br />Instuctor</p>
@@ -2128,7 +2128,7 @@ const Home = () => {
       style={{ position: 'absolute', top: '10%', left: '5%' }}
     >
       <img
-        src="/assets/img/shapes/testi-shape-1.png"
+        src="/LMSCourse/assets/img/shapes/testi-shape-1.png"
         alt="testi"
         style={{ opacity: 0.1 }}
       />
@@ -2138,7 +2138,7 @@ const Home = () => {
       style={{ position: 'absolute', bottom: '10%', right: '5%' }}
     >
       <img
-        src="/assets/img/shapes/testi-shape-2.png"
+        src="/LMSCourse/assets/img/shapes/testi-shape-2.png"
         alt="testi"
         style={{ opacity: 0.1 }}
       />

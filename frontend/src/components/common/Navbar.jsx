@@ -230,7 +230,7 @@ if (hide) {
               {/* Logo on the left */}
               <div className="header-logo d-lg-block" style={{ flex: '0 0 auto' }}>
                 <Link to="/">
-                  <img src="/assets/img/logo/logo-1.png" alt="Logo" />
+                  <img src="/LMSCourse/assets/img/logo/logo-1.png" alt="Logo" />
                 </Link>
               </div>
 

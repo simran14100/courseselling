@@ -225,7 +225,7 @@ const Footer = () => {
               <div className="footer-widget">
                 <h3 className="widget-header">Recent Post</h3>
                 <div className="sidebar-post mb-20">
-                  <img src="/assets/img/images/footer-post-1.png" alt="post" />
+                  <img src="/LMSCourse/assets/img/images/footer-post-1.png" alt="post" />
                   <div className="post-content">
                     <h3 className="title"><Link to="/blog-details">Where Dreams Find a Home</Link></h3>
                     <ul className="post-meta">
@@ -234,7 +234,7 @@ const Footer = () => {
                   </div>
                 </div>
                 <div className="sidebar-post">
-                  <img src="/assets/img/images/footer-post-2.png" alt="post" />
+                  <img src="/LMSCourse/assets/img/images/footer-post-2.png" alt="post" />
                   <div className="post-content">
                     <h3 className="title"><Link to="/blog-details">Where Dreams Find a Home</Link></h3>
                     <ul className="post-meta">
